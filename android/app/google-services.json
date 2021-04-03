@@ -1,0 +1,98 @@
+{
+  "project_info": {
+    "project_number": "782245778778",
+    "project_id": "medcen-f5752",
+    "storage_bucket": "medcen-f5752.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:782245778778:android:04b9a2a06393c7e0ab0f63",
+        "android_client_info": {
+          "package_name": "com.medcen"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "782245778778-kjdul0862rf9ma9bndbq728jrbrqie63.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.medcen",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "782245778778-u8m3cobgjedorbqhhmkj9daie7e09mb1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBBIDuUu4W3lI0zjBkQR6YWkrR0nOyjFJk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "782245778778-u8m3cobgjedorbqhhmkj9daie7e09mb1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "782245778778-5qcki7mrn1atc17542sb1fh2h55o4su0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "org.reactjs.native.example.Medcen"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:782245778778:android:46681187d1dc5879ab0f63",
+        "android_client_info": {
+          "package_name": "com.medcen_partner"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "782245778778-ab6g8f29n2sbc3h3en75nj1jsec4b41f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.medcen_partner",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "782245778778-u8m3cobgjedorbqhhmkj9daie7e09mb1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBBIDuUu4W3lI0zjBkQR6YWkrR0nOyjFJk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "782245778778-u8m3cobgjedorbqhhmkj9daie7e09mb1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "782245778778-5qcki7mrn1atc17542sb1fh2h55o4su0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "org.reactjs.native.example.Medcen"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
