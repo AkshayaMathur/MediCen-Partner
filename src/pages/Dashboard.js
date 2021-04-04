@@ -29,12 +29,85 @@ import dispatchImg from '../assets/dispatch.png';
 import deliveredImg from '../assets/delivered.png';
 import prescriptionImg from '../assets/prescription.png';
 import {normalize} from '../utils/deviceStyle';
+import messaging from '@react-native-firebase/messaging';
+import PushNotification from 'react-native-push-notification';
+import PushNotificationIOS from '@react-native-community/push-notification-ios';
+import {getItem, setItem} from '../utils/secureStorage';
+
 const Dashboard = ({navigation}) => {
   useEffect(() => {
     navigation.setOptions({
       headerShown: false,
     });
   });
+  const checkPermission = async () => {
+    const enabled = await messaging().hasPermission();
+    // If Premission granted proceed towards token fetch
+    if (enabled) {
+      getToken();
+    } else {
+      // If permission hasn’t been granted to our app, request user in requestPermission method.
+      requestPermission();
+    }
+  };
+  const getToken = async () => {
+    let fcmToken = await getItem('fcmToken');
+    console.log('Got FCM TOken From Storage: ', fcmToken);
+    if (!fcmToken) {
+      fcmToken = await messaging().getToken();
+      console.log('FCM Token is: ', fcmToken);
+      if (fcmToken) {
+        // user has a device token
+        await setItem('fcmToken', fcmToken);
+      }
+    }
+  };
+  const requestPermission = async () => {
+    try {
+      await messaging().requestPermission();
+      // User has authorised
+      getToken();
+    } catch (error) {
+      // User has rejected permissions
+      console.log('permission rejected');
+    }
+  };
+  useEffect(() => {
+    checkPermission();
+    PushNotification.configure({
+      onRegister: function (token) {
+        console.log('TOKEN:', token);
+      },
+      onNotification: function (notification) {
+        console.log('NOTIFICATION:', notification, navigation);
+        if (notification.data.id && notification.userInteraction) {
+          console.log('Got Notification id as: ', notification.data.id);
+          navigation.navigate('NotificationViewDetails', {
+            orderId: notification.data.id,
+          });
+        }
+        notification.finish(PushNotificationIOS.FetchResult.NoData);
+      },
+      onAction: function (notification) {
+        console.log('ACTION:', notification.action);
+        console.log('NOTIFICATION:', notification);
+      },
+      onRegistrationError: function (err) {
+        console.error(err.message, err);
+      },
+      // IOS ONLY (optional): default: all - Permissions to register.
+      permissions: {
+        alert: true,
+        badge: true,
+        sound: true,
+      },
+
+      // Should the initial notification be popped automatically
+      // default: true
+      popInitialNotification: true,
+      requestPermissions: true,
+    });
+  }, []);
   return (
     <PlainBaseView color={themes.CONTENT_GREEN_BACKGROUND}>
       <View

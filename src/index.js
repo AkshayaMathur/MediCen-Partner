@@ -27,69 +27,69 @@ LogBox.ignoreLogs([
   'Warning: Cannot update a component from inside the function body of a different component.',
 ]);
 export default class Application extends React.Component {
-  componentDidMount() {
-    this.checkPermission();
-    PushNotification.configure({
-      onRegister: function (token) {
-        console.log('TOKEN:', token);
-      },
-      onNotification: function (notification) {
-        console.log('NOTIFICATION:', notification);
-        notification.finish(PushNotificationIOS.FetchResult.NoData);
-      },
-      onAction: function (notification) {
-        console.log('ACTION:', notification.action);
-        console.log('NOTIFICATION:', notification);
-      },
-      onRegistrationError: function (err) {
-        console.error(err.message, err);
-      },
-      // IOS ONLY (optional): default: all - Permissions to register.
-      permissions: {
-        alert: true,
-        badge: true,
-        sound: true,
-      },
+  // componentDidMount() {
+  //   this.checkPermission();
+  //   PushNotification.configure({
+  //     onRegister: function (token) {
+  //       console.log('TOKEN:', token);
+  //     },
+  //     onNotification: function (notification) {
+  //       console.log('NOTIFICATION:', notification, this.props);
+  //       notification.finish(PushNotificationIOS.FetchResult.NoData);
+  //     },
+  //     onAction: function (notification) {
+  //       console.log('ACTION:', notification.action);
+  //       console.log('NOTIFICATION:', notification, this.props);
+  //     },
+  //     onRegistrationError: function (err) {
+  //       console.error(err.message, err);
+  //     },
+  //     // IOS ONLY (optional): default: all - Permissions to register.
+  //     permissions: {
+  //       alert: true,
+  //       badge: true,
+  //       sound: true,
+  //     },
 
-      // Should the initial notification be popped automatically
-      // default: true
-      popInitialNotification: true,
-      requestPermissions: true,
-    });
-  }
+  //     // Should the initial notification be popped automatically
+  //     // default: true
+  //     popInitialNotification: true,
+  //     requestPermissions: true,
+  //   });
+  // }
 
-  async checkPermission() {
-    const enabled = await messaging().hasPermission();
-    // If Premission granted proceed towards token fetch
-    if (enabled) {
-      this.getToken();
-    } else {
-      // If permission hasn’t been granted to our app, request user in requestPermission method.
-      this.requestPermission();
-    }
-  }
-  async getToken() {
-    let fcmToken = await getItem('fcmToken');
-    console.log('Got FCM TOken From Storage: ', fcmToken);
-    if (!fcmToken) {
-      fcmToken = await messaging().getToken();
-      console.log('FCM Token is: ', fcmToken);
-      if (fcmToken) {
-        // user has a device token
-        await setItem('fcmToken', fcmToken);
-      }
-    }
-  }
-  async requestPermission() {
-    try {
-      await messaging().requestPermission();
-      // User has authorised
-      this.getToken();
-    } catch (error) {
-      // User has rejected permissions
-      console.log('permission rejected');
-    }
-  }
+  // async checkPermission() {
+  //   const enabled = await messaging().hasPermission();
+  //   // If Premission granted proceed towards token fetch
+  //   if (enabled) {
+  //     this.getToken();
+  //   } else {
+  //     // If permission hasn’t been granted to our app, request user in requestPermission method.
+  //     this.requestPermission();
+  //   }
+  // }
+  // async getToken() {
+  //   let fcmToken = await getItem('fcmToken');
+  //   console.log('Got FCM TOken From Storage: ', fcmToken);
+  //   if (!fcmToken) {
+  //     fcmToken = await messaging().getToken();
+  //     console.log('FCM Token is: ', fcmToken);
+  //     if (fcmToken) {
+  //       // user has a device token
+  //       await setItem('fcmToken', fcmToken);
+  //     }
+  //   }
+  // }
+  // async requestPermission() {
+  //   try {
+  //     await messaging().requestPermission();
+  //     // User has authorised
+  //     this.getToken();
+  //   } catch (error) {
+  //     // User has rejected permissions
+  //     console.log('permission rejected');
+  //   }
+  // }
   render() {
     return (
       <BaseView style={{flex: 1}}>

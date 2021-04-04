@@ -50,6 +50,42 @@ const Device_Api = {
         throw err;
       });
   },
+  updatePartnerDetails: (partnerDetails) => {
+    return fetch(
+      'https://7d5simyvz0.execute-api.us-east-1.amazonaws.com/V1/update-partner',
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(partnerDetails),
+      },
+    )
+      .then((res) => res.json())
+      .catch((err) => {
+        console.log('Error In getPartnerDetails: ', err);
+        throw err;
+      });
+  },
+  getOrderDetailsById: (orderId) => {
+    return fetch(
+      'https://7d5simyvz0.execute-api.us-east-1.amazonaws.com/V1/get-order-by-id',
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({Id: orderId}),
+      },
+    )
+      .then((res) => res.json())
+      .catch((err) => {
+        console.log('Error In getPartnerDetails: ', err);
+        throw err;
+      });
+  },
 };
 
 export default Device_Api;

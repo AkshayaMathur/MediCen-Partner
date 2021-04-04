@@ -21,7 +21,9 @@ const BottomTabScreens = ({navigation}) => (
       <BottomTab.Screen
         name="HomeStackScreen"
         component={HomeStackScreens}
+        unmountOnBlur={true}
         options={{
+          unmountOnBlur: true,
           tabBarIcon: ({color, size}) => (
             <MaterialCommunityIcons name="home" color={color} size={size} />
           ),
@@ -30,7 +32,9 @@ const BottomTabScreens = ({navigation}) => (
       <BottomTab.Screen
         name="SearchScreen"
         component={SearchStackScreens}
+        unmountOnBlur={true}
         options={{
+          unmountOnBlur: true,
           tabBarIcon: ({color, size}) => (
             <MaterialIcons name="search" color={color} size={size} />
           ),
@@ -48,7 +52,9 @@ const BottomTabScreens = ({navigation}) => (
       <BottomTab.Screen
         name="AccountScreen"
         component={ProfileStackScreens}
+        unmountOnBlur={true}
         options={{
+          unmountOnBlur: true,
           tabBarIcon: ({color, size}) => (
             <MaterialCommunityIcons name="account" color={color} size={size} />
           ),

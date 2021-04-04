@@ -2,6 +2,7 @@ import React from 'react';
 import {createStackNavigator} from '@react-navigation/stack';
 import SearchPage from '../pages/SearchPage';
 import UploadPrescription from '../pages/UploadPrescription';
+import ViewDetails from '../pages/ViewDetails';
 
 const SearchStack = createStackNavigator();
 
@@ -14,6 +15,7 @@ const SearchStackScreens = ({navigation}) => (
         headerShown: false,
       }}
     />
+    <SearchStack.Screen name="ViewDetails" component={ViewDetails} />
   </SearchStack.Navigator>
 );
 

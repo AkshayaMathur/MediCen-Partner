@@ -294,8 +294,7 @@ const Login = ({navigation}) => {
       <Modal
         transparent={true}
         visible={showModal}
-        onRequestClose={() => setShowModal(false)}
-        transparent>
+        onRequestClose={() => setShowModal(false)}>
         <View style={{backgroundColor: '#fff'}}>
           <TouchableOpacity onPress={() => setShowModal(false)}>
             <Icon name="close" size={30} />
@@ -597,8 +596,6 @@ const Login = ({navigation}) => {
                         <TouchableOpacity
                           onPress={() => setType('pharmacy')}
                           style={{
-                            borderColor: themes.GREEN_BLUE,
-                            borderWidth: 2,
                             backgroundColor:
                               type !== 'doctor'
                                 ? themes.CONTENT_GREEN_BACKGROUND
@@ -756,8 +753,6 @@ const Login = ({navigation}) => {
                         <TouchableOpacity
                           onPress={() => setGender('female')}
                           style={{
-                            borderColor: themes.GREEN_BLUE,
-                            borderWidth: 2,
                             backgroundColor:
                               gender !== 'male'
                                 ? themes.CONTENT_GREEN_BACKGROUND

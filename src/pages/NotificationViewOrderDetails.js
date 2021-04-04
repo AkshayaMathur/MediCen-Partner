@@ -44,6 +44,7 @@ import deliveredImg from '../assets/delivered.png';
 import prescriptionImg from '../assets/prescription.png';
 import MedToast from '../components/MedToast';
 import CustomButton from '../components/CustomButton';
+import Device_Api from '../utils/api';
 const images = [
   {
     url:
@@ -70,11 +71,12 @@ const STATUS_IMAGES = [
   deliveredImg,
   OrderCancelImg,
 ];
-class ViewDetails extends Component {
+class NotificationViewOrderDetails extends Component {
   static navigationOptions = {
     headerMode: 'none',
   };
   state = {
+    loading: true,
     changeOderStatusModal: false,
     showImage: false,
     showAddMedicineModal: false,
@@ -88,7 +90,7 @@ class ViewDetails extends Component {
       price: '',
       comments: '',
     },
-    showprogress: false,
+    showprogress: true,
     medicineModal: {
       visibility: false,
       toadd: true,
@@ -98,16 +100,33 @@ class ViewDetails extends Component {
   };
   constructor(props) {
     super(props);
-    const orders = {...props.route.params.order, comments: ''};
-    this.state.orderDetails = orders;
+    this.getOrderDetails(props.route.params.orderId);
     this.props.navigation.setOptions({
       headerShown: false,
     });
-    if (props.route.params.order.keys) {
-      this.checkPermission(props.route.params.order.keys);
-    }
-    this.state.medicineList = this.state.orderDetails.lineItem;
   }
+  getOrderDetails = (orderId) => {
+    Device_Api.getOrderDetailsById(orderId)
+      .then((res) => {
+        if (res.statusCode === 200) {
+          console.log('RES is: ', res);
+          res.body = {
+            ...res.body,
+            comments: '',
+          };
+          this.state.orderDetails = res.body;
+          this.state.medicineList = res.body.lineItem;
+          if (res.body.keys) {
+            this.checkPermission(res.body.keys);
+          }
+          this.setState({loading: false});
+        }
+      })
+      .catch((err) => {
+        console.log('An Error Occurred while fetching order details: ', err);
+        MedToast.show('An Error Occurred');
+      });
+  };
   checkPermission = async (keys) => {
     try {
       if (keys) {
@@ -322,42 +341,42 @@ class ViewDetails extends Component {
                   );
                 })}
                 {/* <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    backgroundColor: themes.CONTENT_GREEN_BACKGROUND,
-                  }}
-                  onPress={() =>
-                    this.setState({
-                      orderDetails: {
-                        ...orderDetails,
-                        status: 'cancelled',
-                      },
-                    })
-                  }>
-                  <Image
-                    source={OrderCancelImg}
-                    style={{width: 50, height: 50, alignSelf: 'center'}}
-                  />
-                  <Text style={{textAlign: 'center'}}>Cancel</Text>
-                </TouchableOpacity> */}
+                    style={{
+                      flex: 1,
+                      backgroundColor: themes.CONTENT_GREEN_BACKGROUND,
+                    }}
+                    onPress={() =>
+                      this.setState({
+                        orderDetails: {
+                          ...orderDetails,
+                          status: 'cancelled',
+                        },
+                      })
+                    }>
+                    <Image
+                      source={OrderCancelImg}
+                      style={{width: 50, height: 50, alignSelf: 'center'}}
+                    />
+                    <Text style={{textAlign: 'center'}}>Cancel</Text>
+                  </TouchableOpacity> */}
                 {/* <TouchableOpacity
-                  style={{flex: 1}}
-                  onPress={() =>
-                    this.setState({
-                      orderDetails: {
-                        ...orderDetails,
-                        status: 'awaiting',
-                      },
-                    })
-                  }>
-                  <Image
-                    source={OrderCancelImg}
-                    style={{width: 50, height: 50, alignSelf: 'center'}}
-                  />
-                  <Text style={{textAlign: 'center'}}>
-                    Awaiting Prescription Confirmation
-                  </Text>
-                </TouchableOpacity> */}
+                    style={{flex: 1}}
+                    onPress={() =>
+                      this.setState({
+                        orderDetails: {
+                          ...orderDetails,
+                          status: 'awaiting',
+                        },
+                      })
+                    }>
+                    <Image
+                      source={OrderCancelImg}
+                      style={{width: 50, height: 50, alignSelf: 'center'}}
+                    />
+                    <Text style={{textAlign: 'center'}}>
+                      Awaiting Prescription Confirmation
+                    </Text>
+                  </TouchableOpacity> */}
               </View>
             </ScrollView>
           </Dialog.ScrollArea>
@@ -464,27 +483,27 @@ class ViewDetails extends Component {
         style={{flex: 1, paddingVertical: 10, paddingHorizontal: 10}}>
         <View style={{marginHorizontal: 10, marginVertical: 10}}>
           {/* <CustomTextInput
-                editable
-                required={true}
-                field={{
-                  label: 'P Name',
-                  write: true,
-                  value: '',
-                }}
-                onChangeText={(text) => this.setTextField(text, 'mfr')}
-                containerStyle={{marginBottom: 10}}
-              /> */}
+                  editable
+                  required={true}
+                  field={{
+                    label: 'P Name',
+                    write: true,
+                    value: '',
+                  }}
+                  onChangeText={(text) => this.setTextField(text, 'mfr')}
+                  containerStyle={{marginBottom: 10}}
+                /> */}
           {/* <CustomTextInput
-                editable
-                required={true}
-                field={{
-                  label: 'Mobile Number',
-                  write: true,
-                  value: '',
-                }}
-                onChangeText={(text) => this.setTextField(text, 'mfr')}
-                containerStyle={{marginBottom: 10}}
-              /> */}
+                  editable
+                  required={true}
+                  field={{
+                    label: 'Mobile Number',
+                    write: true,
+                    value: '',
+                  }}
+                  onChangeText={(text) => this.setTextField(text, 'mfr')}
+                  containerStyle={{marginBottom: 10}}
+                /> */}
           <CustomTextInput
             editable
             required={true}
@@ -601,330 +620,269 @@ class ViewDetails extends Component {
       showprogress,
       orderDetails,
       medicineModal,
+      loading,
     } = this.state;
     return (
       <PlainBaseView color={themes.CONTENT_GREEN_BACKGROUND}>
-        <ScrollView>
-          <View
-            style={{
-              flex: 0.6,
-              backgroundColor: themes.CONTENT_GREEN_BACKGROUND,
-              borderBottomLeftRadius: 50,
-              borderBottomRightRadius: 50,
-              elevation: 10,
-              shadowColor: '#00000',
-              shadowRadius: 25,
-              shadowOffset: {height: 10, width: 0},
-              // justifyContent: 'center'
-            }}>
-            <View style={{flex: 0.5}}>
-              <AppBar />
-            </View>
-            <View
-              style={{
-                flex: 3,
-                // justifyContent: 'center',
-                paddingHorizontal: 5,
-                paddingVertical: 5,
-                marginLeft: 0,
-              }}>
+        {loading ? (
+          <CustomeProgress showprogress={loading} />
+        ) : (
+          <View>
+            <ScrollView>
               <View
                 style={{
-                  paddingVertical: 0,
-                  paddingHorizontal: 25,
+                  flex: 0.6,
+                  backgroundColor: themes.CONTENT_GREEN_BACKGROUND,
+                  borderBottomLeftRadius: 50,
+                  borderBottomRightRadius: 50,
+                  elevation: 10,
+                  shadowColor: '#00000',
+                  shadowRadius: 25,
+                  shadowOffset: {height: 10, width: 0},
+                  // justifyContent: 'center'
                 }}>
-                <TouchableOpacity
-                  onPress={() => this.setState({changeOderStatusModal: true})}
-                  style={{
-                    margin: 2,
-                    backgroundColor: themes.TEXT_BLUE_COLOR,
-                    padding: 2,
-                    borderRadius: 15,
-                    paddingVertical: 10,
-                    paddingHorizontal: 0,
-                  }}>
-                  <Text
-                    style={{
-                      color: '#fff',
-                      fontWeight: 'bold',
-                      fontSize: themes.FONT_SIZE_MEDIUM,
-                      textAlign: 'center',
-                    }}>
-                    {`✎   ${getStatusString(orderDetails.status)}`}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  marginTop: 10,
-                  paddingHorizontal: 15,
-                  marginBottom: 10,
-                }}>
-                <Text
-                  style={{
-                    fontSize: themes.FONT_SIZE_LARGE,
-                    textAlign: 'center',
-                  }}>
-                  Order Id:
-                </Text>
-                <Text
-                  style={{
-                    fontWeight: 'bold',
-                    fontSize: themes.FONT_SIZE_LARGE,
-                    textAlign: 'center',
-                  }}>
-                  {`# ${orderDetails.Id}`}
-                </Text>
-                {/* <View
-                  style={{
-                    backgroundColor: themes.GREEN_BLUE,
-                    width: 1,
-                    margin: 2,
-                    marginHorizontal: 10,
-                  }}></View>
-                <Text style={{fontSize: themes.FONT_SIZE_LARGE}}> 6:50 PM</Text> */}
+                <View style={{flex: 0.5}}>
+                  <AppBar />
+                </View>
                 <View
                   style={{
-                    backgroundColor: themes.GREEN_BLUE,
-                    width: 1,
-                    margin: 2,
-                    marginHorizontal: 10,
-                  }}
-                />
+                    flex: 3,
+                    // justifyContent: 'center',
+                    paddingHorizontal: 5,
+                    paddingVertical: 5,
+                    marginLeft: 0,
+                  }}>
+                  <View
+                    style={{
+                      paddingVertical: 0,
+                      paddingHorizontal: 25,
+                    }}>
+                    <TouchableOpacity
+                      onPress={() =>
+                        this.setState({changeOderStatusModal: true})
+                      }
+                      style={{
+                        margin: 2,
+                        backgroundColor: themes.TEXT_BLUE_COLOR,
+                        padding: 2,
+                        borderRadius: 15,
+                        paddingVertical: 10,
+                        paddingHorizontal: 0,
+                      }}>
+                      <Text
+                        style={{
+                          color: '#fff',
+                          fontWeight: 'bold',
+                          fontSize: themes.FONT_SIZE_MEDIUM,
+                          textAlign: 'center',
+                        }}>
+                        {`✎   ${getStatusString(orderDetails.status)}`}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      marginTop: 10,
+                      paddingHorizontal: 15,
+                      marginBottom: 10,
+                    }}>
+                    <Text
+                      style={{
+                        fontSize: themes.FONT_SIZE_LARGE,
+                        textAlign: 'center',
+                      }}>
+                      Order Id:
+                    </Text>
+                    <Text
+                      style={{
+                        fontWeight: 'bold',
+                        fontSize: themes.FONT_SIZE_LARGE,
+                        textAlign: 'center',
+                      }}>
+                      {`# ${orderDetails.Id}`}
+                    </Text>
+                    {/* <View
+                    style={{
+                      backgroundColor: themes.GREEN_BLUE,
+                      width: 1,
+                      margin: 2,
+                      marginHorizontal: 10,
+                    }}></View>
+                  <Text style={{fontSize: themes.FONT_SIZE_LARGE}}> 6:50 PM</Text> */}
+                    <View
+                      style={{
+                        backgroundColor: themes.GREEN_BLUE,
+                        width: 1,
+                        margin: 2,
+                        marginHorizontal: 10,
+                      }}
+                    />
+                    <Text
+                      style={{
+                        fontSize: themes.FONT_SIZE_MEDIUM,
+                        textAlignVertical: 'center',
+                      }}>
+                      {' '}
+                      45 min ETA
+                    </Text>
+                  </View>
+                </View>
                 <Text
                   style={{
                     fontSize: themes.FONT_SIZE_MEDIUM,
-                    textAlignVertical: 'center',
+                    textAlign: 'center',
                   }}>
-                  {' '}
-                  45 min ETA
+                  {orderDetails.orderTime}
                 </Text>
               </View>
-            </View>
-            <Text
-              style={{
-                fontSize: themes.FONT_SIZE_MEDIUM,
-                textAlign: 'center',
-              }}>
-              {orderDetails.orderTime}
-            </Text>
-          </View>
 
-          <CustomeProgress showprogress={showprogress} />
-          <View style={{marginTop: 10}}>
-            <View style={{flexDirection: 'row-reverse'}}>
-              <TouchableOpacity
-                onPress={() =>
-                  this.checkPermission(this.props.route.params.order.keys)
-                }
-                style={{
-                  position: 'relative',
-                  backgroundColor: themes.TEXT_BLUE_COLOR,
-                  padding: 5,
-                  borderRadius: 15,
-                  paddingVertical: 5,
-                  paddingHorizontal: 10,
-                  flexDirection: 'row',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                <Icon name="download" size={20} color={'#fff'} />
-                <Text
-                  style={{
-                    fontSize: themes.FONT_SIZE_SMALL,
-                    fontWeight: 'bold',
-                    color: '#fff',
-                    marginLeft: 10,
-                  }}>
-                  DOWNLOAD
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView horizontal={true} style={{minHeight: 330}}>
-              {images.map((img) => {
-                return (
-                  <TouchableHighlight
-                    onPress={() => this.setState({showImage: true})}
-                    style={{alignItems: 'center'}}>
-                    <Image
-                      source={{
-                        uri: img.url,
-                      }}
-                      resizeMode="contain"
+              <CustomeProgress showprogress={showprogress} />
+              <View style={{marginTop: 10}}>
+                <View style={{flexDirection: 'row-reverse'}}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      this.checkPermission(this.props.route.params.order.keys)
+                    }
+                    style={{
+                      position: 'relative',
+                      backgroundColor: themes.TEXT_BLUE_COLOR,
+                      padding: 5,
+                      borderRadius: 15,
+                      paddingVertical: 5,
+                      paddingHorizontal: 10,
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}>
+                    <Icon name="download" size={20} color={'#fff'} />
+                    <Text
                       style={{
-                        width: WIDTH,
-                        height: HEIGHT,
-                        alignSelf: 'center',
-                      }}
-                    />
-                  </TouchableHighlight>
-                );
-              })}
-            </ScrollView>
+                        fontSize: themes.FONT_SIZE_SMALL,
+                        fontWeight: 'bold',
+                        color: '#fff',
+                        marginLeft: 10,
+                      }}>
+                      DOWNLOAD
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <ScrollView horizontal={true} style={{minHeight: 330}}>
+                  {images.map((img) => {
+                    return (
+                      <TouchableHighlight
+                        onPress={() => this.setState({showImage: true})}
+                        style={{alignItems: 'center'}}>
+                        <Image
+                          source={{
+                            uri: img.url,
+                          }}
+                          resizeMode="contain"
+                          style={{
+                            width: WIDTH,
+                            height: HEIGHT,
+                            alignSelf: 'center',
+                          }}
+                        />
+                      </TouchableHighlight>
+                    );
+                  })}
+                </ScrollView>
 
-            {/* <View style={{paddingHorizontal: 40, paddingVertical: 10}}>
-              <TouchableOpacity
-                onPress={() =>
-                  this.checkPermission(this.props.route.params.order.keys)
-                }
-                style={{
-                  position: 'relative',
-                  backgroundColor: themes.TEXT_BLUE_COLOR,
-                  padding: 5,
-                  borderRadius: 15,
-                  paddingVertical: 10,
-                  paddingHorizontal: 0,
-                  flexDirection: 'row',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                <Icon name="download" size={29} color={'#fff'} />
-                <Text
-                  style={{
-                    fontSize: themes.FONT_SIZE_LARGE,
-                    fontWeight: 'bold',
-                    color: '#fff',
-                    marginLeft: 10,
-                  }}>
-                  DOWNLOAD
-                </Text>
-              </TouchableOpacity>
-            </View> */}
-            <View style={{paddingHorizontal: 10, paddingVertical: 10}}>
-              <View style={{marginHorizontal: 8, flexDirection: 'row'}}>
-                <CustomTextInput
-                  editable
-                  required={true}
-                  field={{
-                    label: 'Patient Name',
-                    write: true,
-                    value: this.state.orderDetails.patientName,
-                  }}
-                  containerStyle={{margin: 10}}
-                />
-                <CustomTextInput
-                  editable
-                  required={true}
-                  field={{
-                    label: 'Mobile Number',
-                    write: true,
-                    value: this.state.orderDetails.mobileNumber,
-                    type: 'phone',
-                  }}
-                  containerStyle={{margin: 10}}
-                />
-              </View>
-              <View style={{flexDirection: 'row-reverse'}}>
+                {/* <View style={{paddingHorizontal: 40, paddingVertical: 10}}>
                 <TouchableOpacity
                   onPress={() =>
-                    this.setState({
-                      medicineModal: {
-                        ...medicineModal,
-                        visibility: true,
-                        toadd: true,
-                      },
-                    })
+                    this.checkPermission(this.props.route.params.order.keys)
                   }
                   style={{
-                    flexDirection: 'row',
+                    position: 'relative',
                     backgroundColor: themes.TEXT_BLUE_COLOR,
-                    borderRadius: 25,
-                    paddingHorizontal: 10,
-                    paddingVertical: 5,
-                  }}>
-                  <AntDesignIcon name="pluscircle" size={20} color={'#fff'} />
-                  <Text
-                    style={{
-                      color: '#fff',
-                      fontWeight: 'bold',
-                      marginLeft: 5,
-                      textAlignVertical: 'center',
-                    }}>
-                    Medicine
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View>
-              {medicineList.length > 0 ? (
-                <View
-                  style={{
+                    padding: 5,
+                    borderRadius: 15,
                     paddingVertical: 10,
-                    borderBottomWidth: 3,
-                    borderBottomColor: themes.CONTENT_GREEN_BACKGROUND,
+                    paddingHorizontal: 0,
                     flexDirection: 'row',
                     justifyContent: 'center',
+                    alignItems: 'center',
                   }}>
+                  <Icon name="download" size={29} color={'#fff'} />
                   <Text
                     style={{
-                      flex: 1,
-                      textAlign: 'center',
-                      textAlignVertical: 'center',
+                      fontSize: themes.FONT_SIZE_LARGE,
                       fontWeight: 'bold',
-                      color: themes.TEXT_BLUE_COLOR,
+                      color: '#fff',
+                      marginLeft: 10,
                     }}>
-                    {'Name'}
+                    DOWNLOAD
                   </Text>
-                  <Text
-                    style={{
-                      flex: 1,
-                      textAlign: 'center',
-                      textAlignVertical: 'center',
-                      fontWeight: 'bold',
-                      color: themes.TEXT_BLUE_COLOR,
-                    }}>
-                    {'MRF'}
-                  </Text>
-                  <Text
-                    style={{
-                      flex: 0.8,
-                      textAlign: 'center',
-                      textAlignVertical: 'center',
-                      fontWeight: 'bold',
-                      color: themes.TEXT_BLUE_COLOR,
-                    }}>
-                    {'Unit'}
-                  </Text>
-                  <Text
-                    style={{
-                      flex: 0.8,
-                      textAlign: 'center',
-                      textAlignVertical: 'center',
-                      fontWeight: 'bold',
-                      color: themes.TEXT_BLUE_COLOR,
-                    }}>
-                    {'Price'}
-                  </Text>
+                </TouchableOpacity>
+              </View> */}
+                <View style={{paddingHorizontal: 10, paddingVertical: 10}}>
+                  <View style={{marginHorizontal: 8, flexDirection: 'row'}}>
+                    <CustomTextInput
+                      editable
+                      required={true}
+                      field={{
+                        label: 'Patient Name',
+                        write: true,
+                        value: this.state.orderDetails.patientName,
+                      }}
+                      containerStyle={{margin: 10}}
+                    />
+                    <CustomTextInput
+                      editable
+                      required={true}
+                      field={{
+                        label: 'Mobile Number',
+                        write: true,
+                        value: this.state.orderDetails.mobileNumber,
+                        type: 'phone',
+                      }}
+                      containerStyle={{margin: 10}}
+                    />
+                  </View>
+                  <View style={{flexDirection: 'row-reverse'}}>
+                    <TouchableOpacity
+                      onPress={() =>
+                        this.setState({
+                          medicineModal: {
+                            ...medicineModal,
+                            visibility: true,
+                            toadd: true,
+                          },
+                        })
+                      }
+                      style={{
+                        flexDirection: 'row',
+                        backgroundColor: themes.TEXT_BLUE_COLOR,
+                        borderRadius: 25,
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                      }}>
+                      <AntDesignIcon
+                        name="pluscircle"
+                        size={20}
+                        color={'#fff'}
+                      />
+                      <Text
+                        style={{
+                          color: '#fff',
+                          fontWeight: 'bold',
+                          marginLeft: 5,
+                          textAlignVertical: 'center',
+                        }}>
+                        Medicine
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              ) : null}
-
-              {medicineList.map((med, index) => {
-                return (
-                  <TouchableOpacity
-                    onPress={() => {
-                      let {medicineModal, data} = this.state;
-                      medicineModal = {
-                        ...medicineModal,
-                        visibility: true,
-                        toadd: false,
-                        index: index,
-                      };
-                      data = {...med};
-                      this.setState({medicineModal, data});
-                    }}
-                    style={{
-                      paddingVertical: 10,
-                      borderBottomWidth: 3,
-                      borderBottomColor: themes.CONTENT_GREEN_BACKGROUND,
-                      // flexDirection: 'row',
-                      // justifyContent: 'center',
-                    }}>
+                <View>
+                  {medicineList.length > 0 ? (
                     <View
                       style={{
-                        // paddingVertical: 10,
-                        // borderBottomWidth: 3,
-                        // borderBottomColor: themes.CONTENT_GREEN_BACKGROUND,
+                        paddingVertical: 10,
+                        borderBottomWidth: 3,
+                        borderBottomColor: themes.CONTENT_GREEN_BACKGROUND,
                         flexDirection: 'row',
                         justifyContent: 'center',
                       }}>
@@ -933,98 +891,172 @@ class ViewDetails extends Component {
                           flex: 1,
                           textAlign: 'center',
                           textAlignVertical: 'center',
+                          fontWeight: 'bold',
+                          color: themes.TEXT_BLUE_COLOR,
                         }}>
-                        {med.name}
+                        {'Name'}
                       </Text>
                       <Text
                         style={{
                           flex: 1,
                           textAlign: 'center',
                           textAlignVertical: 'center',
+                          fontWeight: 'bold',
+                          color: themes.TEXT_BLUE_COLOR,
                         }}>
-                        {med.mfr}
+                        {'MRF'}
                       </Text>
                       <Text
                         style={{
                           flex: 0.8,
                           textAlign: 'center',
                           textAlignVertical: 'center',
+                          fontWeight: 'bold',
+                          color: themes.TEXT_BLUE_COLOR,
                         }}>
-                        {med.unit}
+                        {'Unit'}
                       </Text>
                       <Text
                         style={{
                           flex: 0.8,
                           textAlign: 'center',
                           textAlignVertical: 'center',
+                          fontWeight: 'bold',
+                          color: themes.TEXT_BLUE_COLOR,
                         }}>
-                        {med.price}
+                        {'Price'}
                       </Text>
                     </View>
-                    <Text
-                      style={{
-                        flex: 1,
-                        // textAlign: 'center',
-                        textAlignVertical: 'center',
-                        fontWeight: 'bold',
-                        marginLeft: 10,
-                        // color: themes.TEXT_BLUE_COLOR,
-                      }}>
-                      {`Comment: ${med.comments}`}
-                    </Text>
+                  ) : null}
+
+                  {medicineList.map((med, index) => {
+                    return (
+                      <TouchableOpacity
+                        onPress={() => {
+                          let {medicineModal, data} = this.state;
+                          medicineModal = {
+                            ...medicineModal,
+                            visibility: true,
+                            toadd: false,
+                            index: index,
+                          };
+                          data = {...med};
+                          this.setState({medicineModal, data});
+                        }}
+                        style={{
+                          paddingVertical: 10,
+                          borderBottomWidth: 3,
+                          borderBottomColor: themes.CONTENT_GREEN_BACKGROUND,
+                          // flexDirection: 'row',
+                          // justifyContent: 'center',
+                        }}>
+                        <View
+                          style={{
+                            // paddingVertical: 10,
+                            // borderBottomWidth: 3,
+                            // borderBottomColor: themes.CONTENT_GREEN_BACKGROUND,
+                            flexDirection: 'row',
+                            justifyContent: 'center',
+                          }}>
+                          <Text
+                            style={{
+                              flex: 1,
+                              textAlign: 'center',
+                              textAlignVertical: 'center',
+                            }}>
+                            {med.name}
+                          </Text>
+                          <Text
+                            style={{
+                              flex: 1,
+                              textAlign: 'center',
+                              textAlignVertical: 'center',
+                            }}>
+                            {med.mfr}
+                          </Text>
+                          <Text
+                            style={{
+                              flex: 0.8,
+                              textAlign: 'center',
+                              textAlignVertical: 'center',
+                            }}>
+                            {med.unit}
+                          </Text>
+                          <Text
+                            style={{
+                              flex: 0.8,
+                              textAlign: 'center',
+                              textAlignVertical: 'center',
+                            }}>
+                            {med.price}
+                          </Text>
+                        </View>
+                        <Text
+                          style={{
+                            flex: 1,
+                            // textAlign: 'center',
+                            textAlignVertical: 'center',
+                            fontWeight: 'bold',
+                            marginLeft: 10,
+                            // color: themes.TEXT_BLUE_COLOR,
+                          }}>
+                          {`Comment: ${med.comments}`}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                  <View style={{marginHorizontal: 5, marginVertical: 10}}>
+                    <ExpandeablePanel
+                      title={`Delivery To: ${this.state.orderDetails.address.line1} ${this.state.orderDetails.address.line2} ${this.state.orderDetails.address.line3} ${this.state.orderDetails.address.city} ${this.state.orderDetails.address.state}`}>
+                      {this.renderChangeAddress()}
+                    </ExpandeablePanel>
+                  </View>
+                </View>
+                <View style={{marginHorizontal: 8}}>
+                  <CustomTextInput
+                    editable
+                    required={true}
+                    field={{
+                      label: 'Additional Comments',
+                      write: true,
+                      value: this.state.orderDetails.comments,
+                    }}
+                    containerStyle={{margin: 10}}
+                    onChangeText={(text) =>
+                      this.setState({
+                        orderDetails: {
+                          ...orderDetails,
+                          comments: text,
+                        },
+                      })
+                    }
+                  />
+                </View>
+                <View style={{paddingHorizontal: 30}}>
+                  <CustomButton
+                    text="Update Order"
+                    onPress={() => this.updateOrder()}
+                  />
+                </View>
+                <Modal
+                  visible={showImage}
+                  onDismiss={() => this.setState({showImage: false})}
+                  onRequestClose={() => this.setState({showImage: false})}>
+                  <ImageViewer imageUrls={images} />
+                  <TouchableOpacity
+                    onPress={() => this.setState({showImage: false})}
+                    style={{backgroundColor: 'black', position: 'absolute'}}>
+                    <Icon name="close" size={30} color={'#fff'} />
                   </TouchableOpacity>
-                );
-              })}
-              <View style={{marginHorizontal: 5, marginVertical: 10}}>
-                <ExpandeablePanel
-                  title={`Delivery To: ${this.state.orderDetails.address.line1} ${this.state.orderDetails.address.line2} ${this.state.orderDetails.address.line3} ${this.state.orderDetails.address.city} ${this.state.orderDetails.address.state}`}>
-                  {this.renderChangeAddress()}
-                </ExpandeablePanel>
+                </Modal>
               </View>
-            </View>
-            <View style={{marginHorizontal: 8}}>
-              <CustomTextInput
-                editable
-                required={true}
-                field={{
-                  label: 'Additional Comments',
-                  write: true,
-                  value: this.state.orderDetails.comments,
-                }}
-                containerStyle={{margin: 10}}
-                onChangeText={(text) =>
-                  this.setState({
-                    orderDetails: {
-                      ...orderDetails,
-                      comments: text,
-                    },
-                  })
-                }
-              />
-            </View>
-            <View style={{paddingHorizontal: 30}}>
-              <CustomButton
-                text="Update Order"
-                onPress={() => this.updateOrder()}
-              />
-            </View>
-            <Modal
-              visible={showImage}
-              onDismiss={() => this.setState({showImage: false})}
-              onRequestClose={() => this.setState({showImage: false})}>
-              <ImageViewer imageUrls={images} />
-              <TouchableOpacity
-                onPress={() => this.setState({showImage: false})}
-                style={{backgroundColor: 'black', position: 'absolute'}}>
-                <Icon name="close" size={30} color={'#fff'} />
-              </TouchableOpacity>
-            </Modal>
+            </ScrollView>
+            {this.renderAddMedicineModal()}
+            {this.renderChangeOrderStatus()}
           </View>
-        </ScrollView>
-        {this.renderAddMedicineModal()}
-        {this.renderChangeOrderStatus()}
+        )}
       </PlainBaseView>
     );
   }
 }
-export default ViewDetails;
+export default NotificationViewOrderDetails;

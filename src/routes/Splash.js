@@ -20,7 +20,8 @@ import {AuthContext} from '../components/context';
 import MedcenLogo from '../assets/Medcen.png';
 import Device_Api from '../utils/api';
 import {StatusBar} from 'react-native';
-const Splash = () => {
+
+const Splash = (props) => {
   const initialLoginState = {
     username: null,
     userToken: null,
@@ -122,6 +123,7 @@ const Splash = () => {
     }),
     [],
   );
+
   useEffect(() => {
     setTimeout(async () => {
       let token = await getItem('userToken');
@@ -131,6 +133,7 @@ const Splash = () => {
       dispatch({type: 'RETRIEVE_TOKEN', token: token});
     }, 2000);
   }, []);
+
   if (loginState.isLoading) {
     return (
       <View style={{flex: 1}}>

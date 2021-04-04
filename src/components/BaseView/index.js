@@ -27,7 +27,7 @@ class BaseView extends Component {
           backgroundColor={themes.CONTENT_GREEN_BACKGROUND}
           // backgroundColor="#50b98d"
           // backgroundColor={'white'}
-          barStyle="light-content"
+          barStyle="dark-content"
         />
         {/* </LinearGradient> */}
         <View style={styles.content}>{this.props.children}</View>

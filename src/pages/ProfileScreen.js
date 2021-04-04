@@ -145,7 +145,8 @@ const ProfileScreen = ({navigation}) => {
                 backgroundColor: themes.CONTENT_GREEN_BACKGROUND,
               }}
             />
-            <View
+            <TouchableOpacity
+              onPress={() => navigation.navigate('EditAccount')}
               style={{
                 paddingVertical: 10,
                 paddingHorizontal: 10,
@@ -168,7 +169,7 @@ const ProfileScreen = ({navigation}) => {
                   color={themes.TEXT_BLUE_COLOR}
                 />
               </View>
-            </View>
+            </TouchableOpacity>
             <View
               style={{
                 height: 3,
