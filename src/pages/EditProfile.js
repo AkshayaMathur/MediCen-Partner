@@ -15,7 +15,7 @@ import PharmacyImg from '../assets/drugstore.png';
 import DoctorMaleImage from '../assets/doctorMale.jpg';
 import DoctorFemaleImage from '../assets/doctorFemale.jpg';
 import themes from '../themes';
-import CustomTextInput from '../components/CustomTextInput';
+import CustomTextInput from '../components/LoginTextInput';
 import {getUserDetails, setUserDetails} from '../utils/userprofile';
 import ExpandeablePanel from '../components/ExpandeablePanel';
 import LocationApi from '../utils/locationAPI';
@@ -25,19 +25,28 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import MapView, {Marker} from 'react-native-maps';
 import CustomButton from '../components/CustomButton';
 import Device_Api from '../utils/api';
+import SiNewDate from '../components/SiNewDate';
+import CustomTimePicker from '../components/CustomTimePicker';
 const EditProfile = ({navigation}) => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [userEmailValidation, setUserEmailValidation] = useState('');
   const [userName, setUserName] = useState('');
+  const [userNameValidation, setUserNameValidation] = useState('');
   const [userPassword, setUserPassword] = useState('');
+  const [userPasswordValidation, setUserPasswordValidation] = useState('');
   const [userMobile, setUserMobile] = useState('');
+  const [userMobileValidation, setUserMobileValidation] = useState('');
   const [landline, setLandline] = useState('');
+  const [landlineValidation, setLandlineValidation] = useState('');
   const [licence, setLicence] = useState('');
+  const [licenceValidation, setLicenceValidation] = useState('');
   const [type, setType] = useState('doctor');
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('male');
   const [contactPerson, setContactPerson] = useState('');
+  const [contactPersonValidation, setContactPersonValidation] = useState('');
   const [speciality, setSpeciality] = useState('');
   const [description, setDescription] = useState('');
 
@@ -59,6 +68,8 @@ const EditProfile = ({navigation}) => {
   const [saturday, setSaturday] = useState('');
   const [sunday, setSunday] = useState('');
   const [Id, setId] = useState('');
+  const [latDelta, setLanDelta] = useState(0.03);
+  const [lonDelta, setLonDelta] = useState(0.03);
   useEffect(() => {
     console.log('USE EFFECT CALLED');
     navigation.setOptions({
@@ -110,33 +121,86 @@ const EditProfile = ({navigation}) => {
     }
     setLoading(false);
   };
-  const checkIfOnlyNum = (val) => {
-    return /^\d+$/.test(val.trim());
+  const validateText = (inp) => {
+    let letters = /^[a-zA-Z. ]*$/;
+    if (inp.match(letters)) {
+      return true;
+    }
+    return false;
   };
-  const getLocationDetailsFromPincode = (pincodeInp) => {
-    LocationApi.getLocationFromPincode(pincodeInp)
-      .then((res) => {
+  const validateEmailId = (inp) => {
+    let letters = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+    if (inp.match(letters)) {
+      return true;
+    }
+    return false;
+  };
+  const validateMobileNumber = (inp) => {
+    let letters = /^[0-9]{10}$/;
+    if (inp.match(letters)) {
+      return true;
+    }
+    return false;
+  };
+  // const validateLicence = (inp) => {
+  //   var str = inp.replace(/-/g, '');
+  //   console.log('STR= ', str, inp);
+  //   var matches = str.match(/(\d+)/);
+  //   console.log('MATCHES iS: ', matches[0]);
+  //   if (matches && matches[0].toString().length === 10) {
+  //     console.log('CAME ISIDE...................');
+  //     console.log((inp.match(/-/g) || []).length);
+  //     if (
+  //       (inp.match(/-/g) || []).length === 1 ||
+  //       (inp.match(/-/g) || []).length === 2
+  //     ) {
+  //       return true;
+  //     }
+  //   }
+  //   return false;
+  // };
+  const validatePassword = (inp) => {
+    let letters = /^[a-zA-Z0-9.!#@$%&'*+/=?^_`{|}~-]{6,15}$/;
+    if (inp.match(letters)) {
+      return true;
+    }
+    return false;
+  };
+  const checkIfOnlyNum = (val) => {
+    return /^\d+$/.test(val);
+  };
+  const getLocationDetailsFromPincode = (pincode) => {
+    LocationApi.getLocationFromPincode(pincode)
+      .then((result) => {
+        let res = result.results;
         console.log('Result for pincode is: ', res);
         if (res && res.length > 0) {
           //Set Lat/Log
-          console.log('Addr.lat is:', res[0].lat, res[0].lon);
+          console.log(
+            'Addr.lat is:',
+            parseFloat(res[0].geometry.location.lat),
+            parseFloat(res[0].geometry.location.lng),
+          );
 
-          if (res[0].lat) {
-            setLan(parseFloat(res[0].lat));
+          if (res[0].geometry.location.lat) {
+            setLan(parseFloat(res[0].geometry.location.lat));
           }
-          if (res[0].lon) {
-            setLon(parseFloat(res[0].lon));
+          if (res[0].geometry.location.lng) {
+            setLon(parseFloat(res[0].geometry.location.lng));
           }
           //Set Address
-          let addr = res[0].display_name;
+          let addr = res[0].formatted_address;
           console.log('Addr is: ', addr);
           if (addr && addr !== '') {
-            let arr = addr.split(',');
+            let arr = addr.split(' ');
             const len = arr.length;
             let i = len - 1;
-            console.log('Arr is: ', arr[i - 1].trim(), len);
-
-            let isnum = /^\d+$/.test(arr[i - 1].trim());
+            console.log('Arr is: ', arr, len);
+            arr.map((a, index) => {
+              arr[index] = a.replace(',', '');
+            });
+            console.log('FORMATED Arr is: ', arr, len);
+            let isnum = /^\d+$/.test(arr[i - 1]);
             console.log('isnum: ', isnum);
             if (!checkIfOnlyNum(arr[i])) {
               setCountry(arr[i]);
@@ -181,37 +245,103 @@ const EditProfile = ({navigation}) => {
         transparent={true}
         visible={showModal}
         onRequestClose={() => setShowModal(false)}>
-        <View style={styles.modalBackgroundColor}>
+        <View style={{backgroundColor: '#fff'}}>
           <TouchableOpacity onPress={() => setShowModal(false)}>
             <Icon name="close" size={30} />
           </TouchableOpacity>
+          <View style={{paddingHorizontal: 10}}>
+            <Text
+              style={{
+                textAlign: 'center',
+                color: themes.TEXT_BLUE_COLOR,
+                paddingHorizontal: 10,
+                fontSize: themes.FONT_SIZE_LARGE,
+                fontWeight: 'bold',
+              }}>
+              Mark Exact Location On Map
+            </Text>
+            <View
+              style={{
+                marginTop: 10,
+                height: 3,
+                backgroundColor: themes.CONTENT_GREEN_BACKGROUND,
+              }}
+            />
+          </View>
         </View>
-        <View style={styles.modalContainer}>
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            backgroundColor: '#fff',
+            // padding: 40,
+          }}>
           <MapView
             region={{
               latitude: lat,
               longitude: lon,
-              latitudeDelta: 0.03,
-              longitudeDelta: 0.03,
+              latitudeDelta: latDelta,
+              longitudeDelta: lonDelta,
             }}
-            // onRegionChangeComplete={this.handleRegionChange}
-            style={styles.mapviewContainer}>
+            onRegionChangeComplete={(e) => {
+              console.log('Region change is: ', e);
+              setLanDelta(e.latitudeDelta);
+              setLonDelta(e.longitudeDelta);
+            }}
+            style={{width: '100%', height: 400}}>
             <Marker.Animated
               draggable={true}
               coordinate={{latitude: lat, longitude: lon}}
               onDragEnd={(e) => {
-                console.log('dragEnd', e.nativeEvent.coordinate);
+                console.log('dragEnd', e.nativeEvent);
                 setLan(e.nativeEvent.coordinate.latitude);
                 setLon(e.nativeEvent.coordinate.longitude);
+                // this.setState({x: e.nativeEvent.coordinate});
               }}
             />
           </MapView>
+        </View>
+        <View>
+          <Text
+            style={{
+              textAlign: 'center',
+              color: 'red',
+              paddingHorizontal: 10,
+              fontSize: themes.FONT_SIZE_SMALL,
+            }}>
+            *Long Press On The Red Marker to move it
+          </Text>
         </View>
       </Modal>
     );
   };
 
   const updateUser = () => {
+    if (!validateText(userName) || userName === '') {
+      MedToast.show('Enter A Valid Name');
+      return;
+    } else if (!validateEmailId(userEmail)) {
+      MedToast.show('Please Enter a Valid Email ID');
+      return;
+    } else if (!validateMobileNumber(userMobile)) {
+      MedToast.show('Please Enter a Valid Mobile Number');
+      return;
+    } else if (!validatePassword(userPassword)) {
+      MedToast.show('Please Enter a Valid Password');
+      return;
+    } else if (
+      line1 === '' ||
+      line2 === '' ||
+      // line3 === '' ||
+      city === '' ||
+      state === '' ||
+      country === ''
+    ) {
+      MedToast.show('Please a valid address');
+      return;
+    }
     setLoading(true);
     let obj = {
       Id: Id,
@@ -254,6 +384,7 @@ const EditProfile = ({navigation}) => {
         if (res.statusCode === 200) {
           setUserDetails(obj);
           MedToast.show('Updated User Successfully');
+          setUserDetails(obj);
           navigation.goBack();
         } else {
           MedToast.show('An error Occurred While Updating Profile');
@@ -273,32 +404,92 @@ const EditProfile = ({navigation}) => {
         style={styles.content}
         behavior={'height'}
         keyboardVerticalOffset={60}>
-        <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={{
+            // marginHorizontal: 10,
+            // marginVertical: 20,
+            // // maxHeight: 450,
+            // paddingBottom: 0,
+            // paddingVertical: 0,
+            flex: 1,
+          }}>
           <View>
-            <Text style={styles.label}>I'm a</Text>
-            <View style={styles.choiceContainer}>
+            <Text
+              style={{
+                fontWeight: 'bold',
+                color: 'grey',
+                fontSize: themes.FONT_SIZE_MEDIUM,
+              }}>
+              I'm a
+            </Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-around',
+              }}>
               <TouchableOpacity
                 onPress={() => setType('doctor')}
-                style={dynamicStyle(type === 'doctor').firstContainer}>
+                style={{
+                  borderColor: themes.GREEN_BLUE,
+                  borderWidth: type === 'doctor' ? 3 : 0,
+                  backgroundColor:
+                    type === 'doctor'
+                      ? themes.CONTENT_GREEN_BACKGROUND
+                      : '#fff',
+                  padding: 10,
+                  borderRadius: 25,
+                }}>
                 <Image
                   source={DoctorMaleImage}
-                  style={styles.choiceImage}
+                  style={{
+                    width: 70,
+                    height: 50,
+                    justifyContent: 'center',
+                    alignSelf: 'center',
+                  }}
                   resizeMode="contain"
                 />
-                <Text style={dynamicStyle(type === 'doctor').firstlabel}>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    textAlignVertical: 'center',
+                    fontSize: themes.FONT_SIZE_NORMAL,
+                    fontWeight: type === 'doctor' ? 'bold' : null,
+                  }}>
                   Doctor
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setType('pharmacy')}
-                style={dynamicStyle1(type !== 'doctor').firstContainer}>
+                style={{
+                  backgroundColor:
+                    type !== 'doctor'
+                      ? themes.CONTENT_GREEN_BACKGROUND
+                      : '#fff',
+                  borderColor: themes.GREEN_BLUE,
+                  borderWidth: type !== 'doctor' ? 3 : 0,
+                  padding: 10,
+                  borderRadius: 25,
+                }}>
                 <Image
                   source={PharmacyImg}
-                  style={styles.choiceImage}
+                  style={{
+                    width: 70,
+                    height: 50,
+                    justifyContent: 'center',
+                    alignSelf: 'center',
+                  }}
                   resizeMode="contain"
                 />
-                <Text style={dynamicStyle1(type !== 'doctor').firstlabel}>
-                  Pharmacy
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    textAlignVertical: 'center',
+                    fontSize: themes.FONT_SIZE_NORMAL,
+                    fontWeight: type !== 'doctor' ? 'bold' : null,
+                  }}>
+                  Pharmacy{' '}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -308,11 +499,20 @@ const EditProfile = ({navigation}) => {
               editable
               required={true}
               field={{
-                label: 'Name',
+                label: type !== 'doctor' ? 'Pharmacy Name' : 'Name',
                 write: true,
                 value: userName,
               }}
-              onChangeText={(text) => setUserName(text)}
+              onChangeText={(text) => {
+                if (validateText(text)) {
+                  setUserName(text);
+                  setUserNameValidation('');
+                } else {
+                  MedToast.show('Please enter a valid name');
+                  setUserNameValidation('Please enter a valid name');
+                }
+              }}
+              errorMessage={userNameValidation}
             />
           </View>
           <View style={{}}>
@@ -326,6 +526,15 @@ const EditProfile = ({navigation}) => {
                 type: 'email',
               }}
               onChangeText={(text) => setUserEmail(text)}
+              onSubmitEditing={() => {
+                if (!validateEmailId(userEmail)) {
+                  setUserEmailValidation('Please Enter a Valid Email ID');
+                  MedToast.show('Please Enter a Valid Email ID');
+                } else {
+                  setUserEmailValidation('');
+                }
+              }}
+              errorMessage={userEmailValidation}
             />
           </View>
           <View style={{}}>
@@ -336,8 +545,18 @@ const EditProfile = ({navigation}) => {
                 label: 'Licence',
                 write: true,
                 value: licence,
+                type: 'licence',
               }}
               onChangeText={(text) => setLicence(text)}
+              // onSubmitEditing={() => {
+              //   if (!validateLicence(licence)) {
+              //     MedToast.show('Please Enter a Licence Number');
+              //     setLicenceValidation('Please Enter a Licence Number');
+              //   } else {
+              //     setLicenceValidation('');
+              //   }
+              // }}
+              // errorMessage={licenceValidation}
             />
           </View>
           <View>
@@ -351,6 +570,15 @@ const EditProfile = ({navigation}) => {
                 type: 'number',
               }}
               onChangeText={(text) => setUserMobile(text)}
+              onSubmitEditing={() => {
+                if (!validateMobileNumber(userMobile)) {
+                  MedToast.show('Please Enter a Valid Mobile Number');
+                  setUserMobileValidation('Please Enter a Valid Mobile Number');
+                } else {
+                  setUserMobileValidation('');
+                }
+              }}
+              errorMessage={userMobileValidation}
             />
           </View>
           <View>
@@ -364,10 +592,19 @@ const EditProfile = ({navigation}) => {
                 type: 'number',
               }}
               onChangeText={(text) => setLandline(text)}
+              onSubmitEditing={() => {
+                if (!validateMobileNumber(landline)) {
+                  MedToast.show('Please Enter a Valid Landline Number');
+                  setLandlineValidation('Please Enter a Valid Landline Number');
+                } else {
+                  setLandlineValidation('');
+                }
+              }}
+              errorMessage={landlineValidation}
             />
           </View>
 
-          <View>
+          {/* <View>
             <CustomTextInput
               editable
               required={true}
@@ -378,49 +615,122 @@ const EditProfile = ({navigation}) => {
                 type: 'password',
               }}
               onChangeText={(text) => setUserPassword(text)}
+              onSubmitEditing={() => {
+                if (!validatePassword(userPassword)) {
+                  MedToast.show('Please Enter a Valid Password');
+                  setUserPasswordValidation(
+                    'Password should have minimum length of 6 character and maximum length of 15 character',
+                  );
+                } else {
+                  setUserPasswordValidation('');
+                }
+              }}
+              errorMessage={userPasswordValidation}
             />
-          </View>
+          </View> */}
           <View>
-            <Text style={styles.label}>Gender</Text>
-            <View style={styles.choiceContainer}>
+            <Text
+              style={{
+                fontWeight: 'bold',
+                color: 'grey',
+                fontSize: themes.FONT_SIZE_MEDIUM,
+              }}>
+              Gender
+            </Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-around',
+              }}>
               <TouchableOpacity
                 onPress={() => setGender('male')}
-                style={dynamicStyle1(gender === 'male').firstContainer}>
+                style={{
+                  borderColor: themes.GREEN_BLUE,
+                  borderWidth: gender === 'male' ? 3 : 0,
+                  backgroundColor:
+                    gender === 'male'
+                      ? themes.CONTENT_GREEN_BACKGROUND
+                      : '#fff',
+                  padding: 10,
+                  borderRadius: 25,
+                }}>
                 <Image
                   source={DoctorMaleImage}
-                  style={styles.choiceImage}
+                  style={{
+                    width: 70,
+                    height: 50,
+                    justifyContent: 'center',
+                    alignSelf: 'center',
+                  }}
                   resizeMode="contain"
                 />
-                <Text style={dynamicStyle1(gender === 'male').firstlabel}>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    textAlignVertical: 'center',
+                    fontSize: themes.FONT_SIZE_NORMAL,
+                    fontWeight: gender === 'male' ? 'bold' : null,
+                  }}>
                   Male
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setGender('female')}
-                style={dynamicStyle1(gender !== 'male').firstContainer}>
+                style={{
+                  backgroundColor:
+                    gender !== 'male'
+                      ? themes.CONTENT_GREEN_BACKGROUND
+                      : '#fff',
+                  borderColor: themes.GREEN_BLUE,
+                  borderWidth: gender !== 'male' ? 3 : 0,
+                  padding: 10,
+                  borderRadius: 25,
+                }}>
                 <Image
                   source={DoctorFemaleImage}
-                  style={styles.choiceImage}
+                  style={{
+                    width: 70,
+                    height: 50,
+                    justifyContent: 'center',
+                    alignSelf: 'center',
+                  }}
                   resizeMode="contain"
                 />
-                <Text style={dynamicStyle1(gender !== 'male').firstlabel}>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    textAlignVertical: 'center',
+                    fontSize: themes.FONT_SIZE_NORMAL,
+                    fontWeight: gender !== 'male' ? 'bold' : null,
+                  }}>
                   Female
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
-          <View>
-            <CustomTextInput
-              editable
-              required={true}
-              field={{
-                label: 'Age',
-                write: true,
-                value: age,
-                type: 'number',
+          <View style={{marginBottom: 10}}>
+            {/* <CustomTextInput
+                        editable
+                        required={true}
+                        field={{
+                          label: 'Age',
+                          write: true,
+                          value: age,
+                          type: 'number',
+                        }}
+                        onChangeText={(text) => setAge(text)}
+                      /> */}
+            {/* <SiNewDate
+              value={age}
+              textlabel={type === 'doctor' ? 'Date Of Birth' : 'Opening Date'}
+              // style={{borderWidth: 1}}
+              // containerStyle={{marginTop: 10}}
+              disabled={false}
+              onChangeText={(date) => {
+                console.log('Calledddddddddddddddd', date);
+                setAge(date);
               }}
-              onChangeText={(text) => setAge(text)}
-            />
+            /> */}
           </View>
           <View>
             <CustomTextInput
@@ -431,20 +741,33 @@ const EditProfile = ({navigation}) => {
                 write: true,
                 value: contactPerson,
               }}
-              onChangeText={(text) => setContactPerson(text)}
+              onChangeText={(text) => {
+                if (validateText(text)) {
+                  setContactPerson(text);
+                  setContactPersonValidation('');
+                } else {
+                  MedToast.show('Please enter valid contact person name');
+                  setContactPersonValidation(
+                    'Please enter valid contact person name',
+                  );
+                }
+              }}
+              errorMessage={contactPersonValidation}
             />
           </View>
           <View>
-            <CustomTextInput
-              editable
-              required={true}
-              field={{
-                label: 'Speciality',
-                write: true,
-                value: speciality,
-              }}
-              onChangeText={(text) => setSpeciality(text)}
-            />
+            {type === 'doctor' ? (
+              <CustomTextInput
+                editable
+                required={true}
+                field={{
+                  label: 'Speciality',
+                  write: true,
+                  value: speciality,
+                }}
+                onChangeText={(text) => setSpeciality(text)}
+              />
+            ) : null}
           </View>
           <View>
             <CustomTextInput
@@ -454,11 +777,14 @@ const EditProfile = ({navigation}) => {
                 label: 'Description',
                 write: true,
                 value: description,
+                type: 'description',
               }}
+              multiline={true}
+              numberOfLines={10}
               onChangeText={(text) => setDescription(text)}
             />
           </View>
-          <View style={styles.expandeablePanelContainer}>
+          <View style={{marginBottom: 20}}>
             <ExpandeablePanel title="Address">
               <CustomTextInput
                 editable
@@ -467,7 +793,7 @@ const EditProfile = ({navigation}) => {
                   label: 'pincode',
                   write: true,
                   value: pincode,
-                  type: 'number',
+                  type: 'pincode',
                 }}
                 onChangeText={(text) => setPincodeDate(text)}
               />
@@ -478,6 +804,7 @@ const EditProfile = ({navigation}) => {
                   label: 'Flat, House No., Building',
                   write: true,
                   value: line1,
+                  type: 'location',
                 }}
                 onChangeText={(text) => setLine1(text)}
               />
@@ -488,6 +815,7 @@ const EditProfile = ({navigation}) => {
                   label: 'Area, Colony, Street, Sector',
                   write: true,
                   value: line2,
+                  type: 'location',
                 }}
                 onChangeText={(text) => setLine2(text)}
               />
@@ -498,6 +826,7 @@ const EditProfile = ({navigation}) => {
                   label: 'Landmark',
                   write: true,
                   value: line3,
+                  type: 'location',
                 }}
                 onChangeText={(text) => setLine3(text)}
               />
@@ -508,6 +837,7 @@ const EditProfile = ({navigation}) => {
                   label: 'City',
                   write: true,
                   value: city,
+                  type: 'location',
                 }}
                 onChangeText={(text) => setCity(text)}
               />
@@ -518,6 +848,7 @@ const EditProfile = ({navigation}) => {
                   label: 'State',
                   write: true,
                   value: state,
+                  type: 'location',
                 }}
                 onChangeText={(text) => setState(text)}
               />
@@ -528,20 +859,26 @@ const EditProfile = ({navigation}) => {
                   label: 'Country',
                   write: true,
                   value: country,
+                  type: 'location',
                 }}
                 onChangeText={(text) => setCountry(text)}
               />
               <TouchableOpacity
                 onPress={() => setShowModal(true)}
-                style={styles.mapContainer}>
-                <Image source={MapImg} style={styles.mapImage} />
-                <Text style={styles.mapLabel}>
-                  {'  Mark Extact Location On Map'}
+                style={{flexDirection: 'row'}}>
+                <Image source={MapImg} style={{width: 25, height: 25}} />
+                <Text
+                  style={{
+                    fontWeight: 'bold',
+                    color: 'grey',
+                    fontSize: themes.FONT_SIZE_NORMAL,
+                  }}>
+                  Mark Extact Location On Map
                 </Text>
               </TouchableOpacity>
             </ExpandeablePanel>
           </View>
-          <View style={styles.expandeablePanelContainer}>
+          <View style={{marginBottom: 20}}>
             <ExpandeablePanel title="Time">
               <CustomTextInput
                 editable
@@ -550,9 +887,40 @@ const EditProfile = ({navigation}) => {
                   label: 'Monday',
                   write: true,
                   value: monday,
+                  type: 'time',
                 }}
                 onChangeText={(text) => setMonday(text)}
               />
+              {/* <CustomTimePicker
+                textlabel={'Monday'}
+                value={monday}
+                checked={monday.open24Hours}
+                handleChangeOpening={(value) => {
+                  setMonday({
+                    ...monday,
+                    opening: {
+                      hours: value.hours,
+                      minutes: value.minutes,
+                    },
+                  });
+                }}
+                handleChangeClosing={(value) => {
+                  setMonday({
+                    ...monday,
+                    closing: {
+                      hours: value.hours,
+                      minutes: value.minutes,
+                    },
+                  });
+                }}
+                onCheckboxClick={() => {
+                  setMonday({
+                    opening: {hours: 0, minutes: 0},
+                    closing: {hours: 23, minutes: 59},
+                    open24Hours: !monday.open24Hours,
+                  });
+                }}
+              /> */}
               <CustomTextInput
                 editable
                 required={true}
@@ -560,9 +928,40 @@ const EditProfile = ({navigation}) => {
                   label: 'Tuesday',
                   write: true,
                   value: tuesday,
+                  type: 'time',
                 }}
                 onChangeText={(text) => setTuesday(text)}
               />
+              {/* <CustomTimePicker
+                textlabel={'Tuesday'}
+                value={tuesday}
+                checked={tuesday.open24Hours}
+                handleChangeOpening={(value) => {
+                  setTuesday({
+                    ...tuesday,
+                    opening: {
+                      hours: value.hours,
+                      minutes: value.minutes,
+                    },
+                  });
+                }}
+                handleChangeClosing={(value) => {
+                  setTuesday({
+                    ...tuesday,
+                    closing: {
+                      hours: value.hours,
+                      minutes: value.minutes,
+                    },
+                  });
+                }}
+                onCheckboxClick={() => {
+                  setTuesday({
+                    opening: {hours: 0, minutes: 0},
+                    closing: {hours: 23, minutes: 59},
+                    open24Hours: !tuesday.open24Hours,
+                  });
+                }}
+              /> */}
               <CustomTextInput
                 editable
                 required={true}
@@ -570,9 +969,40 @@ const EditProfile = ({navigation}) => {
                   label: 'Wednesday',
                   write: true,
                   value: wednesday,
+                  type: 'time',
                 }}
                 onChangeText={(text) => setWednesday(text)}
               />
+              {/* <CustomTimePicker
+                textlabel={'Wednesday'}
+                value={wednesday}
+                checked={wednesday.open24Hours}
+                handleChangeOpening={(value) => {
+                  setWednesday({
+                    ...wednesday,
+                    opening: {
+                      hours: value.hours,
+                      minutes: value.minutes,
+                    },
+                  });
+                }}
+                handleChangeClosing={(value) => {
+                  setWednesday({
+                    ...wednesday,
+                    closing: {
+                      hours: value.hours,
+                      minutes: value.minutes,
+                    },
+                  });
+                }}
+                onCheckboxClick={() => {
+                  setWednesday({
+                    opening: {hours: 0, minutes: 0},
+                    closing: {hours: 23, minutes: 59},
+                    open24Hours: !wednesday.open24Hours,
+                  });
+                }}
+              /> */}
               <CustomTextInput
                 editable
                 required={true}
@@ -580,9 +1010,40 @@ const EditProfile = ({navigation}) => {
                   label: 'Thrusday',
                   write: true,
                   value: thrusday,
+                  type: 'time',
                 }}
                 onChangeText={(text) => setThrusday(text)}
               />
+              {/* <CustomTimePicker
+                textlabel={'Thrusday'}
+                value={thrusday}
+                checked={thrusday.open24Hours}
+                handleChangeOpening={(value) => {
+                  setThrusday({
+                    ...thrusday,
+                    opening: {
+                      hours: value.hours,
+                      minutes: value.minutes,
+                    },
+                  });
+                }}
+                handleChangeClosing={(value) => {
+                  setThrusday({
+                    ...thrusday,
+                    closing: {
+                      hours: value.hours,
+                      minutes: value.minutes,
+                    },
+                  });
+                }}
+                onCheckboxClick={() => {
+                  setThrusday({
+                    opening: {hours: 0, minutes: 0},
+                    closing: {hours: 23, minutes: 59},
+                    open24Hours: !thrusday.open24Hours,
+                  });
+                }}
+              /> */}
               <CustomTextInput
                 editable
                 required={true}
@@ -590,9 +1051,40 @@ const EditProfile = ({navigation}) => {
                   label: 'Friday',
                   write: true,
                   value: friday,
+                  type: 'time',
                 }}
                 onChangeText={(text) => setFriday(text)}
               />
+              {/* <CustomTimePicker
+                textlabel={'Friday'}
+                value={friday}
+                checked={friday.open24Hours}
+                handleChangeOpening={(value) => {
+                  setFriday({
+                    ...friday,
+                    opening: {
+                      hours: value.hours,
+                      minutes: value.minutes,
+                    },
+                  });
+                }}
+                handleChangeClosing={(value) => {
+                  setFriday({
+                    ...friday,
+                    closing: {
+                      hours: value.hours,
+                      minutes: value.minutes,
+                    },
+                  });
+                }}
+                onCheckboxClick={() => {
+                  setFriday({
+                    opening: {hours: 0, minutes: 0},
+                    closing: {hours: 23, minutes: 59},
+                    open24Hours: !friday.open24Hours,
+                  });
+                }}
+              /> */}
               <CustomTextInput
                 editable
                 required={true}
@@ -600,9 +1092,40 @@ const EditProfile = ({navigation}) => {
                   label: 'Saturday',
                   write: true,
                   value: saturday,
+                  type: 'time',
                 }}
                 onChangeText={(text) => setSaturday(text)}
               />
+              {/* <CustomTimePicker
+                textlabel={'Saturday'}
+                value={saturday}
+                checked={saturday.open24Hours}
+                handleChangeOpening={(value) => {
+                  setSaturday({
+                    ...saturday,
+                    opening: {
+                      hours: value.hours,
+                      minutes: value.minutes,
+                    },
+                  });
+                }}
+                handleChangeClosing={(value) => {
+                  setSaturday({
+                    ...saturday,
+                    closing: {
+                      hours: value.hours,
+                      minutes: value.minutes,
+                    },
+                  });
+                }}
+                onCheckboxClick={() => {
+                  setSaturday({
+                    opening: {hours: 0, minutes: 0},
+                    closing: {hours: 23, minutes: 59},
+                    open24Hours: !saturday.open24Hours,
+                  });
+                }}
+              /> */}
               <CustomTextInput
                 editable
                 required={true}
@@ -610,9 +1133,40 @@ const EditProfile = ({navigation}) => {
                   label: 'Sunday',
                   write: true,
                   value: sunday,
+                  type: 'time',
                 }}
                 onChangeText={(text) => setSunday(text)}
               />
+              {/* <CustomTimePicker
+                textlabel={'Sunday'}
+                value={sunday}
+                checked={sunday.open24Hours}
+                handleChangeOpening={(value) => {
+                  setSunday({
+                    ...sunday,
+                    opening: {
+                      hours: value.hours,
+                      minutes: value.minutes,
+                    },
+                  });
+                }}
+                handleChangeClosing={(value) => {
+                  setSunday({
+                    ...sunday,
+                    closing: {
+                      hours: value.hours,
+                      minutes: value.minutes,
+                    },
+                  });
+                }}
+                onCheckboxClick={() => {
+                  setSunday({
+                    opening: {hours: 0, minutes: 0},
+                    closing: {hours: 23, minutes: 59},
+                    open24Hours: !sunday.open24Hours,
+                  });
+                }}
+              /> */}
             </ExpandeablePanel>
           </View>
           <View>

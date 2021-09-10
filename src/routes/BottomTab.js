@@ -7,6 +7,8 @@ import themes from '../themes';
 import ProfileStackScreens from './ProfileStack';
 import SearchStackScreens from './SearchStack';
 import {tabAuthContext} from '../components/tab_context';
+import {Image} from 'react-native';
+import ResearchStackScreens from './ResearchStack';
 const BottomTab = createBottomTabNavigator();
 
 const BottomTabScreens = ({navigation}) => (
@@ -17,6 +19,7 @@ const BottomTabScreens = ({navigation}) => (
         showLabel: false,
         lazy: true,
         detachInactiveScreens: true,
+        keyboardHidesTabBar: true,
       }}>
       <BottomTab.Screen
         name="HomeStackScreen"
@@ -39,16 +42,26 @@ const BottomTabScreens = ({navigation}) => (
             <MaterialIcons name="search" color={color} size={size} />
           ),
         }}
+        listeners={({navigation}) => ({
+          tabPress: (e) => {
+            // Prevent default action
+            e.preventDefault();
+            navigation.navigate('SearchScreen', {
+              screen: 'SearchPage',
+              params: {opensearch: true},
+            });
+          },
+        })}
       />
-      {/* <BottomTab.Screen
-      name="NotificationScreen"
-      component={HomeStackScreens}
-      options={{
-        tabBarIcon: ({color, size}) => (
-          <MaterialCommunityIcons name="bell" color={color} size={size} />
-        ),
-      }}
-    /> */}
+      <BottomTab.Screen
+        name="ResearchScreen"
+        component={ResearchStackScreens}
+        options={{
+          tabBarIcon: ({color, size}) => (
+            <MaterialIcons name="analytics" color={color} size={size} />
+          ),
+        }}
+      />
       <BottomTab.Screen
         name="AccountScreen"
         component={ProfileStackScreens}

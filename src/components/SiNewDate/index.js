@@ -99,21 +99,19 @@ export default class SiNewDate extends Component {
           <Text style={styles.reqColor}>
             {this.props.required ? ' *' : null}
           </Text>
-          <Text style={styles.txtStyle}>
-            {this.props.disabled ? ' (Disabled)' : ''}
-          </Text>
         </View>
         <View style={styles.container}>
           <DatePicker
             style={{width: '100%'}}
             date={value}
             mode="date"
+            disabled={this.props.disabled}
             // mode="time"
             placeholder={`Select ${this.props.textlabel}`}
             format="YYYY-MM-DD"
             iconSource={datePic}
             // minDate="2016-05-01"
-            // maxDate="2016-06-01"
+            maxDate={new Date()}
             confirmBtnText="Confirm"
             cancelBtnText="Cancel"
             customStyles={{
@@ -142,12 +140,14 @@ export default class SiNewDate extends Component {
               // ... You can check the source to find the other keys.
             }}
             onDateChange={(date) => {
-              value = date;
+              // value = date;
               console.log('Date Is changing to: ', date);
+              this.props.onChangeText(date);
               this.setState({date: date});
-              if (this.props.onChangeText(date)) {
-                this.props.onChangeText(date);
-              }
+              // if (this.props.onChangeText(date)) {
+              //   console.log('onChangeText Is changing to: ', date);
+              //   this.props.onChangeText(date);
+              // }
             }}
           />
         </View>
@@ -200,10 +200,10 @@ const styles = StyleSheet.create({
     tintColor: '#2387AA',
   },
   normalTextStyle: {color: '#2D373C', fontWeight: '600'},
-  reqColor: {color: 'black', color: 'red'},
+  reqColor: {color: 'red'},
   txtStyle: {
     fontWeight: 'bold',
-    color: 'grey',
+    // color: 'grey',
     fontSize: themes.FONT_SIZE_MEDIUM,
   },
   txtInputStyle: {flexDirection: 'row', flex: 0.5, marginBottom: 5},

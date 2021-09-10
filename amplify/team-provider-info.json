@@ -1,0 +1,20 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-medcenpartner-dev-221922-authRole",
+      "UnauthRoleArn": "arn:aws:iam::225355316402:role/amplify-medcenpartner-dev-221922-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::225355316402:role/amplify-medcenpartner-dev-221922-authRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-medcenpartner-dev-221922-deployment",
+      "UnauthRoleName": "amplify-medcenpartner-dev-221922-unauthRole",
+      "StackName": "amplify-medcenpartner-dev-221922",
+      "StackId": "arn:aws:cloudformation:us-east-1:225355316402:stack/amplify-medcenpartner-dev-221922/4d1e7390-da8c-11eb-99bf-0a55d4967de1",
+      "AmplifyAppId": "d3n0l77fn0f03z"
+    },
+    "categories": {
+      "auth": {
+        "medcenpartnere740d885e740d885": {}
+      }
+    }
+  }
+}

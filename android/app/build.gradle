@@ -1,5 +1,4 @@
 apply plugin: "com.android.application"
-
 apply plugin: 'com.google.gms.google-services'
 import com.android.build.OutputFile
 
@@ -134,8 +133,8 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         compileSdkVersion rootProject.ext.compileSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 8
+        versionName "1.1"
         multiDexEnabled true
     }
     splits {

@@ -6,6 +6,8 @@ import messaging from '@react-native-firebase/messaging';
 import {getItem, setItem} from './utils/secureStorage';
 import PushNotification from 'react-native-push-notification';
 import PushNotificationIOS from '@react-native-community/push-notification-ios';
+import Amplify, {Auth} from 'aws-amplify';
+import config from './aws-exports';
 LogBox.ignoreLogs([
   'Require cycle: ',
   'Remote debugger',
@@ -26,6 +28,8 @@ LogBox.ignoreLogs([
   'Sending `onAnimatedValueUpdate` with no listeners registered.',
   'Warning: Cannot update a component from inside the function body of a different component.',
 ]);
+Amplify.configure(config);
+Auth.configure(config);
 export default class Application extends React.Component {
   // componentDidMount() {
   //   this.checkPermission();

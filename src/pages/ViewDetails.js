@@ -33,17 +33,31 @@ import FunctionButton from '../components/FunctionButton';
 import RNFetchBlob from 'rn-fetch-blob';
 import * as RNFS from 'react-native-fs';
 import CustomeProgress from '../components/CustomProgress';
-import {getStatusString} from '../utils/generalFunction';
+import {
+  getPaymentModeName,
+  getRepeatOrderString,
+  getStatusString,
+} from '../utils/generalFunction';
 import ExpandeablePanel from '../components/ExpandeablePanel';
+import AddInvoice from './AddInvoice';
 import MapView, {Marker} from 'react-native-maps';
 import OrderCancelImg from '../assets/oderCancel.png';
 import CustAwaitingImg from '../assets/customerConfirmation.png';
 import PreparingImg from '../assets/preparingOrder.png';
 import dispatchImg from '../assets/dispatch.png';
 import deliveredImg from '../assets/delivered.png';
+import delayImg from '../assets/delayed.png';
 import prescriptionImg from '../assets/prescription.png';
 import MedToast from '../components/MedToast';
 import CustomButton from '../components/CustomButton';
+import SiCheckBox from '../components/SiCheckBox';
+import SiNewDate from '../components/SiNewDate';
+import {formateDate} from '../utils/date.formatter';
+import {normalize} from '../utils/deviceStyle';
+import WarnigPic from '../assets/warning.png';
+import Suggestion from '../components/Suggestion';
+import _, {debounce} from 'lodash';
+import Device_Api from '../utils/api';
 const images = [
   {
     url:
@@ -61,6 +75,7 @@ const STATUS = [
   'dispatch',
   'delivered',
   'cancelled',
+  'delayed',
 ];
 const STATUS_IMAGES = [
   prescriptionImg,
@@ -69,6 +84,7 @@ const STATUS_IMAGES = [
   dispatchImg,
   deliveredImg,
   OrderCancelImg,
+  delayImg,
 ];
 class ViewDetails extends Component {
   static navigationOptions = {
@@ -95,20 +111,67 @@ class ViewDetails extends Component {
       index: 0,
     },
     comments: '',
+    medicineSuggestionList: [],
+    paymentConfirmationModal: false,
+    addInvoiceModalVisibility: false,
   };
   constructor(props) {
     super(props);
+    this.historyCommments = props.route.params.order.comments;
     const orders = {...props.route.params.order, comments: ''};
     this.state.orderDetails = orders;
     this.props.navigation.setOptions({
       headerShown: false,
     });
-    if (props.route.params.order.keys) {
-      this.checkPermission(props.route.params.order.keys);
+    if (props.route.params.order.keys && props.route.params.order.imageUrls) {
+      this.checkPermission(
+        props.route.params.order.keys,
+        props.route.params.order.imageUrls,
+      );
     }
     this.state.medicineList = this.state.orderDetails.lineItem;
+    if (this.state.medicineList) {
+      let total = 0;
+      console.log('MEDICAL LIST IS: ', this.state.orderDetails.lineItem);
+      this.state.orderDetails.lineItem.map((med) => {
+        if (med.price && med.price !== '') {
+          total = total + parseFloat(med.price);
+        }
+      });
+      console.log('Total to set is: ', total);
+      this.state.orderDetails.totalPrice = total;
+    }
+    this.medicalSuggestionDebounce = debounce(this.medicalSuggestion, 1000);
+    this.restrictUpdate = false;
+    if (
+      props.route.params.order.status === 'delivered' ||
+      props.route.params.order.status === 'cancelled'
+    ) {
+      this.restrictUpdate = true;
+    }
   }
-  checkPermission = async (keys) => {
+  medicalSuggestion = (txt) => {
+    if (txt.length > 2) {
+      Device_Api.medicalSuggestion(txt)
+        .then((res) => {
+          console.log('Res is: ', res);
+          if (res && res.items && res.items.length > 0) {
+            let obj = [];
+            res.items.map((i) => {
+              obj.push({
+                label: i.txt,
+                value: i.url,
+              });
+            });
+            this.setState({medicineSuggestionList: obj});
+          }
+        })
+        .catch((err) => {
+          console.log('An error while finding suggestions');
+        });
+    }
+  };
+  checkPermission = async (keys, urls) => {
     try {
       if (keys) {
         if (Platform.OS === 'android') {
@@ -121,11 +184,11 @@ class ViewDetails extends Component {
             },
           );
           if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-            this.downloadImage(keys);
+            this.downloadImage(keys, urls);
           } else {
           }
         } else {
-          this.downloadImage(keys);
+          this.downloadImage(keys, urls);
         }
       }
     } catch (err) {
@@ -133,57 +196,39 @@ class ViewDetails extends Component {
     }
   };
 
-  downloadImage = (keys) => {
-    console.log('Got Keys to download: ', keys);
+  downloadImage = (keys, urls) => {
+    console.log('Got Keys to download: ', keys, urls);
+    if (keys.length <= 0) {
+      return;
+    }
     this.setState({showprogress: true});
     try {
-      keys.map((key) => {
-        fetch(
-          'https://anaxvws1vf.execute-api.us-east-1.amazonaws.com/V1/download-image',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              filename: key,
-              bucketName: 'medcen-data',
-            }),
-          },
-        )
-          .then((res) => res.json())
-          .then(
-            (result) => {
-              console.log(result);
-              const {config, fs} = RNFetchBlob;
-              let PictureDir = fs.dirs.PictureDir;
-              console.log('PictureDir', PictureDir);
-              let options = {
-                fileCache: true,
-              };
-              config(options)
-                .fetch('GET', result.body)
-                .then(async (res) => {
-                  console.log('REs is: ', res);
-                  let r = await res.readStream();
-                  console.log('R is: ', r);
-                  r._onEnd((res) => console.log('jkjfjnfdlsdf', res));
-                  console.log('R2 is: ', r);
-                  const imagePath = `${
-                    RNFS.DocumentDirectoryPath
-                  }/${new Date().toISOString()}.jpg`.replace(/:/g, '-');
-                  RNFS.copyFile(res.data, imagePath);
-                  const {images} = this.state;
-                  images.push({url: 'file://' + imagePath});
-                  this.setState({images, showprogress: false}, () =>
-                    console.log('New Image is: ', this.state.images),
-                  );
-                });
-            },
-            (error) => {
-              console.log(error);
-            },
-          );
+      urls.map((url) => {
+        const {config, fs} = RNFetchBlob;
+        let PictureDir = fs.dirs.PictureDir;
+        console.log('PictureDir', PictureDir);
+        let options = {
+          fileCache: true,
+        };
+        config(options)
+          .fetch('GET', url)
+          .then(async (res) => {
+            console.log('REs is: ', res);
+            // let r = await res.readStream();
+            // console.log('R is: ', r);
+            // r._onEnd((res) => console.log('jkjfjnfdlsdf', res));
+            // console.log('R2 is: ', r);
+            const imagePath = `${PictureDir}/${new Date().toISOString()}.jpg`.replace(
+              /:/g,
+              '-',
+            );
+            RNFS.copyFile(res.data, imagePath);
+            const {images} = this.state;
+            images.push({url: 'file://' + imagePath});
+            this.setState({images, showprogress: false}, () =>
+              console.log('New Image is: ', this.state.images),
+            );
+          });
       });
     } catch (error) {
       console.log('An error Occurred while downloading img: ', error);
@@ -193,7 +238,9 @@ class ViewDetails extends Component {
     console.log('Value is: ', value, 'Field is: ', field);
     let temp = this.state.data;
     temp[field] = value;
-
+    if (field === 'name') {
+      this.medicalSuggestionDebounce(value);
+    }
     this.setState({data: temp});
   };
   saveMedicine = () => {
@@ -218,15 +265,64 @@ class ViewDetails extends Component {
           toadd: true,
         },
       },
-      () => console.log('Medicine list is setS', medicineList),
+      () => {
+        this.calculateTotalPrice();
+        console.log('Medicine list is setS', medicineList);
+      },
     );
   };
 
-  updateOrder = () => {
+  updateOrder = (paymentVerified) => {
+    console.log('PAYMENT VERIFIED IS:', paymentVerified);
     this.setState({showprogress: true});
     let {orderDetails, medicineList} = this.state;
+    if (
+      this.restrictUpdate &&
+      (paymentVerified === null || paymentVerified === undefined)
+    ) {
+      orderDetails.showCommentMessage = true;
+      orderDetails.notificationMessage = orderDetails.comments;
+    }
+    if (
+      orderDetails.comments !== '' &&
+      this.historyCommments &&
+      this.historyCommments !== ''
+    ) {
+      orderDetails.comments = `${this.historyCommments}\n${orderDetails.comments}`;
+    } else if (this.historyCommments && this.historyCommments !== '') {
+      orderDetails.comments = `${this.historyCommments}`;
+    }
+    if (paymentVerified !== null && paymentVerified !== undefined) {
+      console.log('PAYMENT VERIFIED IS:', paymentVerified);
+      orderDetails.paymentVerified = paymentVerified;
+      if (paymentVerified) {
+        orderDetails.showPaymentVerifiedNotification = true;
+      } else {
+        orderDetails.showPaymentNotVerifiedNotification = true;
+      }
+    } else {
+      if (orderDetails.invoiceKey && orderDetails.invoiceKey.length > 0) {
+      } else {
+        if (
+          orderDetails.status === 'dispatch' ||
+          orderDetails.status === 'delivered'
+        ) {
+          if (medicineList.length <= 0) {
+            this.setState({showprogress: false});
+            MedToast.show('Please Add Medicines');
+            return;
+          }
+          if (!orderDetails.totalPrice || orderDetails.totalPrice === 0) {
+            this.setState({showprogress: false});
+            MedToast.show('Please Enter The Price Of Medicines');
+            return;
+          }
+        }
+      }
+    }
     orderDetails.lineItem = medicineList;
     orderDetails.updatedFrom = 'partner';
+    console.log('Final Object to post is: ', orderDetails);
     fetch(
       'https://7d5simyvz0.execute-api.us-east-1.amazonaws.com/V1/update-order',
       {
@@ -239,7 +335,9 @@ class ViewDetails extends Component {
         console.log('The response is: ', res);
         if (res.statusCode === 201) {
           MedToast.show('Order Updated Successfully');
-          this.props.navigation.goBack();
+          if (!paymentVerified) {
+            this.props.navigation.goBack();
+          }
         } else {
           MedToast.show('An Error Occurred... Pls Try again');
         }
@@ -253,15 +351,127 @@ class ViewDetails extends Component {
   };
 
   setOrderStatus = (status) => {
-    this.setState((prevState) => ({
-      orderDetails: {
-        ...prevState.orderDetails,
-        status: status,
+    console.log('Set Order Status is: ', status);
+    this.setState(
+      (prevState) => ({
+        orderDetails: {
+          ...prevState.orderDetails,
+          status: status,
+        },
+        changeOderStatusModal: status === 'delayed' ? true : false,
+      }),
+      () => {
+        if (status !== 'delayed') {
+          this.updateOrder();
+        }
       },
-      changeOderStatusModal: false,
-    }));
+    );
   };
 
+  calculateTotalPrice = () => {
+    const {medicineList} = this.state;
+    let total = 0;
+    console.log('MEDICAL LIST IS: ', medicineList);
+    medicineList.map((med) => {
+      if (med.price && med.price !== '') {
+        total = total + parseFloat(med.price);
+      }
+    });
+    console.log('Total to set is: ', total);
+    this.setState(
+      {
+        orderDetails: {
+          ...this.state.orderDetails,
+          totalPrice: total,
+        },
+      },
+      () => console.log('Order Details are: ', this.state.orderDetails),
+    );
+  };
+  sendReminderToUser = () => {
+    console.log('Called remindUser');
+    const {orderDetails} = this.state;
+    let obj = {
+      Id: orderDetails.Id,
+      userId: orderDetails.userId,
+      totalPrice: orderDetails.totalPrice,
+    };
+    Device_Api.remindUser(obj)
+      .then((res) => {
+        if (res.statusCode === 200) {
+          MedToast.show('Payment Reminder Sent To User');
+        } else {
+          MedToast.show('An Error Occurred');
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+        MedToast.show('An Error Occurred');
+      });
+  };
+  renderConfirmOrderStatus = () => {
+    const {paymentConfirmationModal, orderDetails} = this.state;
+    return (
+      <Portal>
+        <Dialog
+          visible={paymentConfirmationModal}
+          onDismiss={() =>
+            this.setState({
+              paymentConfirmationModal: false,
+            })
+          }>
+          <Dialog.Title
+            style={{
+              color: themes.TEXT_BLUE_COLOR,
+              justifyContent: 'center',
+              textAlign: 'center',
+              borderBottomColor: themes.CONTENT_GREEN_BACKGROUND,
+              borderBottomWidth: 3,
+            }}>
+            Confirm Order Status
+          </Dialog.Title>
+          <Dialog.ScrollArea>
+            <ScrollView>
+              <Text>{`Did you receive the payment of ₹${
+                orderDetails.totalPrice
+              } via ${getPaymentModeName(orderDetails.paymentMode)}?`}</Text>
+            </ScrollView>
+          </Dialog.ScrollArea>
+          <Dialog.Actions
+            style={{alignItems: 'center', justifyContent: 'center'}}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-evenly',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+              }}>
+              <View style={{flex: 1, margin: 10}}>
+                <FunctionButton
+                  text="No"
+                  color="red"
+                  onPress={() => {
+                    this.setState({paymentConfirmationModal: false});
+                    this.updateOrder(false);
+                  }}
+                />
+              </View>
+              <View style={{flex: 1, margin: 10}}>
+                <FunctionButton
+                  onPress={() => {
+                    this.setState({paymentConfirmationModal: false});
+                    this.updateOrder(true);
+                  }}
+                  text="YES"
+                  color={themes.TEXT_BLUE_COLOR}
+                />
+              </View>
+            </View>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+    );
+  };
   renderChangeOrderStatus = () => {
     const {changeOderStatusModal, orderDetails} = this.state;
     return (
@@ -294,31 +504,86 @@ class ViewDetails extends Component {
                 }}>
                 {STATUS.map((status, index) => {
                   return (
-                    <TouchableOpacity
-                      style={{
-                        // flex: 1,
-                        width: 100,
-                        height: 120,
-                        borderRadius: 25,
-                        paddingVertical: 10,
-                        backgroundColor:
-                          status === orderDetails.status
-                            ? themes.CONTENT_GREEN_BACKGROUND
-                            : '#fff',
-                      }}
-                      onPress={() => this.setOrderStatus(status)}>
-                      <Image
-                        source={STATUS_IMAGES[index]}
-                        style={{width: 50, height: 50, alignSelf: 'center'}}
-                      />
-                      <Text
+                    <View style={{flexDirection: 'row'}}>
+                      <TouchableOpacity
                         style={{
-                          textAlign: 'center',
-                          textAlignVertical: 'center',
-                        }}>
-                        {getStatusString(status)}
-                      </Text>
-                    </TouchableOpacity>
+                          // flex: 1,
+                          width: 100,
+                          height: 120,
+                          borderRadius: 25,
+                          paddingVertical: 10,
+                          backgroundColor:
+                            status === orderDetails.status
+                              ? themes.CONTENT_GREEN_BACKGROUND
+                              : '#fff',
+                        }}
+                        onPress={() => this.setOrderStatus(status)}>
+                        <Image
+                          source={STATUS_IMAGES[index]}
+                          style={{width: 50, height: 50, alignSelf: 'center'}}
+                        />
+                        <Text
+                          style={{
+                            textAlign: 'center',
+                            textAlignVertical: 'center',
+                          }}>
+                          {getStatusString(status)}
+                        </Text>
+                      </TouchableOpacity>
+                      {orderDetails.status === 'delayed' &&
+                      status === 'delayed' ? (
+                        <CustomTextInput
+                          editable
+                          required={true}
+                          field={{
+                            label: 'Reason',
+                            write: true,
+                            value: this.state.orderDetails.comments,
+                          }}
+                          multiline={false}
+                          returnKeyType={'done'}
+                          containerStyle={{margin: 10}}
+                          onSubmitEditing={() =>
+                            this.setState({changeOderStatusModal: false}, () =>
+                              this.updateOrder(),
+                            )
+                          }
+                          onEndEditing={() =>
+                            this.setState({changeOderStatusModal: false}, () =>
+                              this.updateOrder(),
+                            )
+                          }
+                          onChangeText={(text) =>
+                            this.setState({
+                              orderDetails: {
+                                ...orderDetails,
+                                comments: text,
+                              },
+                            })
+                          }
+                        />
+                      ) : null}
+                      {orderDetails.status === 'delayed' &&
+                      status === 'delayed' ? (
+                        <TouchableOpacity
+                          onPress={() => {
+                            this.setState({changeOderStatusModal: false}, () =>
+                              this.updateOrder(),
+                            );
+                          }}
+                          style={{
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            flexDirection: 'row',
+                          }}>
+                          <AntDesignIcon
+                            name="checkcircle"
+                            size={normalize(25)}
+                          />
+                        </TouchableOpacity>
+                      ) : null}
+                      {/* <AntDesignIcon name="check" size={20} /> */}
+                    </View>
                   );
                 })}
                 {/* <TouchableOpacity
@@ -355,7 +620,7 @@ class ViewDetails extends Component {
                     style={{width: 50, height: 50, alignSelf: 'center'}}
                   />
                   <Text style={{textAlign: 'center'}}>
-                    Awaiting Prescription Confirmation
+                    Awaiting Order Confirmation
                   </Text>
                 </TouchableOpacity> */}
               </View>
@@ -391,7 +656,7 @@ class ViewDetails extends Component {
           </Dialog.Title>
           <Dialog.ScrollArea>
             <ScrollView>
-              <CustomTextInput
+              {/* <CustomTextInput
                 editable
                 required={true}
                 field={{
@@ -400,12 +665,27 @@ class ViewDetails extends Component {
                   value: data.name,
                 }}
                 onChangeText={(text) => this.setTextField(text, 'name')}
+              /> */}
+              <Suggestion
+                editable
+                required={true}
+                field={{
+                  label: 'Name Of Medicine',
+                  write: true,
+                  value: data.name,
+                }}
+                nameSuggestion={this.state.medicineSuggestionList}
+                onSelect={(value) => {
+                  console.log('Selected Value is: ', value);
+                  this.setTextField(value.label, 'name');
+                }}
+                onChangeText={(text) => this.setTextField(text, 'name')}
               />
               <CustomTextInput
                 editable
                 required={true}
                 field={{
-                  label: 'Name Of Mfr.',
+                  label: 'Name Of Manufacturer',
                   write: true,
                   value: data.mfr,
                 }}
@@ -445,7 +725,19 @@ class ViewDetails extends Component {
               />
             </ScrollView>
             <Dialog.Actions style={{justifyContent: 'space-evenly'}}>
-              <FunctionButton color={'red'} text={'Cancel'} />
+              <FunctionButton
+                color={'red'}
+                text={'Cancel'}
+                onPress={() =>
+                  this.setState({
+                    medicineModal: {
+                      ...medicineModal,
+                      visibility: false,
+                      toadd: true,
+                    },
+                  })
+                }
+              />
               <FunctionButton
                 onPress={() => this.saveMedicine()}
                 color={themes.TEXT_BLUE_COLOR}
@@ -463,131 +755,266 @@ class ViewDetails extends Component {
         showsVerticalScrollIndicator={false}
         style={{flex: 1, paddingVertical: 10, paddingHorizontal: 10}}>
         <View style={{marginHorizontal: 10, marginVertical: 10}}>
-          {/* <CustomTextInput
-                editable
-                required={true}
-                field={{
-                  label: 'P Name',
-                  write: true,
-                  value: '',
-                }}
-                onChangeText={(text) => this.setTextField(text, 'mfr')}
-                containerStyle={{marginBottom: 10}}
-              /> */}
-          {/* <CustomTextInput
-                editable
-                required={true}
-                field={{
-                  label: 'Mobile Number',
-                  write: true,
-                  value: '',
-                }}
-                onChangeText={(text) => this.setTextField(text, 'mfr')}
-                containerStyle={{marginBottom: 10}}
-              /> */}
-          <CustomTextInput
-            editable
-            required={true}
-            field={{
-              label: 'PIN Code',
-              write: true,
-              value: this.state.orderDetails.address.pincode,
-              type: 'phone',
-            }}
-            containerStyle={{marginBottom: 10}}
-          />
-          <CustomTextInput
-            editable
-            required={true}
-            field={{
-              label: 'Flat, House No., Building,',
-              write: true,
-              value: this.state.orderDetails.address.line1,
-            }}
-            onChangeText={(text) => this.setState({line1: text})}
-            containerStyle={{marginBottom: 10}}
-          />
-          <CustomTextInput
-            editable
-            required={true}
-            field={{
-              label: 'Area, Colony, Street, Sector',
-              write: true,
-              value: this.state.orderDetails.address.line2,
-            }}
-            onChangeText={(text) => this.setState({line2: text})}
-            containerStyle={{marginBottom: 10}}
-          />
-          <CustomTextInput
-            editable
-            required={true}
-            field={{
-              label: 'Landmark',
-              write: true,
-              value: this.state.orderDetails.address.line3,
-            }}
-            onChangeText={(text) => this.setState({line3: text})}
-            containerStyle={{marginBottom: 10}}
-          />
-          <CustomTextInput
-            editable
-            required={true}
-            field={{
-              label: 'City/Town',
-              write: true,
-              value: this.state.orderDetails.address.city,
-            }}
-            containerStyle={{marginBottom: 10}}
-          />
-          <CustomTextInput
-            editable
-            required={true}
-            field={{
-              label: 'State',
-              write: true,
-              value: this.state.orderDetails.address.state,
-            }}
-            containerStyle={{marginBottom: 10}}
-          />
-          <CustomTextInput
-            editable
-            required={true}
-            field={{
-              label: 'Country',
-              write: true,
-              value: this.state.orderDetails.address.country,
-            }}
-            containerStyle={{marginBottom: 10}}
-          />
-        </View>
-        <View
-          style={{
-            justifyContent: 'center',
-            borderWidth: 3,
-            borderColor: themes.GREEN_BLUE,
-          }}>
-          <MapView
-            showsUserLocation={true}
-            region={{
-              latitude: parseFloat(this.state.orderDetails.address.latitude),
-              longitude: parseFloat(this.state.orderDetails.address.longitude),
-              latitudeDelta: 0.03,
-              longitudeDelta: 0.03,
-            }}
-            // onRegionChangeComplete={this.handleRegionChange}
-            style={{width: '100%', height: 300}}>
-            <Marker.Animated
-              draggable={true}
-              coordinate={{
-                latitude: parseFloat(this.state.orderDetails.address.latitude),
-                longitude: parseFloat(
-                  this.state.orderDetails.address.longitude,
-                ),
+          <View style={{flexDirection: 'row'}}>
+            <SiCheckBox
+              title="Self Pickup"
+              containerStyle={{
+                backgroundColor: '#fff',
+                margin: 0,
+                marginHorizontal: 0,
+                marginVertical: 0,
+                padding: 5,
+                borderWidth: 0,
               }}
+              textStyle={{fontSize: themes.FONT_SIZE_MEDIUM}}
+              checked={
+                this.state.orderDetails.deliveryType === 'pickup' ? true : false
+              }
+              // onPressCheckbox={() => {
+              //   this.setState({
+              //     orderDetails: {
+              //       ...this.state.orderDetails,
+              //       deliveryType: 'pickup',
+              //     },
+              //   });
+              // }}
             />
-          </MapView>
+            <SiCheckBox
+              title="Delivery"
+              containerStyle={{
+                backgroundColor: '#fff',
+                margin: 0,
+                marginHorizontal: 0,
+                marginVertical: 0,
+                padding: 5,
+                borderWidth: 0,
+              }}
+              textStyle={{fontSize: themes.FONT_SIZE_MEDIUM}}
+              checked={
+                this.state.orderDetails.deliveryType === 'delivery'
+                  ? true
+                  : false
+              }
+              // onPressCheckbox={() => {
+              //   this.setState({
+              //     orderDetails: {
+              //       ...this.state.orderDetails,
+              //       deliveryType: 'delivery',
+              //     },
+              //   });
+              // }}
+            />
+          </View>
+          {this.state.orderDetails.deliveryType === 'pickup' ? null : (
+            <View>
+              <View>
+                <CustomTextInput
+                  editable
+                  required={true}
+                  field={{
+                    label: 'PIN Code',
+                    write: true,
+                    value: this.state.orderDetails.address.pincode,
+                    type: 'phone',
+                  }}
+                  containerStyle={{marginBottom: 10}}
+                />
+                <CustomTextInput
+                  editable
+                  required={true}
+                  field={{
+                    label: 'Flat, House No., Building,',
+                    write: true,
+                    value: this.state.orderDetails.address.line1,
+                  }}
+                  onChangeText={(text) => this.setState({line1: text})}
+                  containerStyle={{marginBottom: 10}}
+                />
+                <CustomTextInput
+                  editable
+                  required={true}
+                  field={{
+                    label: 'Area, Colony, Street, Sector',
+                    write: true,
+                    value: this.state.orderDetails.address.line2,
+                  }}
+                  onChangeText={(text) => this.setState({line2: text})}
+                  containerStyle={{marginBottom: 10}}
+                />
+                <CustomTextInput
+                  editable
+                  required={true}
+                  field={{
+                    label: 'Landmark',
+                    write: true,
+                    value: this.state.orderDetails.address.line3,
+                  }}
+                  onChangeText={(text) => this.setState({line3: text})}
+                  containerStyle={{marginBottom: 10}}
+                />
+                <CustomTextInput
+                  editable
+                  required={true}
+                  field={{
+                    label: 'City/Town',
+                    write: true,
+                    value: this.state.orderDetails.address.city,
+                  }}
+                  containerStyle={{marginBottom: 10}}
+                />
+                <CustomTextInput
+                  editable
+                  required={true}
+                  field={{
+                    label: 'State',
+                    write: true,
+                    value: this.state.orderDetails.address.state,
+                  }}
+                  containerStyle={{marginBottom: 10}}
+                />
+                <CustomTextInput
+                  editable
+                  required={true}
+                  field={{
+                    label: 'Country',
+                    write: true,
+                    value: this.state.orderDetails.address.country,
+                  }}
+                  containerStyle={{marginBottom: 10}}
+                />
+              </View>
+              <View
+                style={{
+                  justifyContent: 'center',
+                  borderWidth: 3,
+                  borderColor: themes.GREEN_BLUE,
+                }}>
+                <MapView
+                  showsUserLocation={true}
+                  region={{
+                    latitude: parseFloat(
+                      this.state.orderDetails.address.latitude,
+                    ),
+                    longitude: parseFloat(
+                      this.state.orderDetails.address.longitude,
+                    ),
+                    latitudeDelta: 0.03,
+                    longitudeDelta: 0.03,
+                  }}
+                  // onRegionChangeComplete={this.handleRegionChange}
+                  style={{width: '100%', height: 300}}>
+                  <Marker.Animated
+                    draggable={true}
+                    coordinate={{
+                      latitude: parseFloat(
+                        this.state.orderDetails.address.latitude,
+                      ),
+                      longitude: parseFloat(
+                        this.state.orderDetails.address.longitude,
+                      ),
+                    }}
+                  />
+                </MapView>
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
+    );
+  };
+  reDownloadImage = () => {
+    this.setState({images: []});
+    let keys = this.props.route.params.order.keys;
+    console.log('Got Keys to download: ', keys);
+    try {
+      keys.map((key) => {
+        fetch(
+          'https://anaxvws1vf.execute-api.us-east-1.amazonaws.com/V1/download-image',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              filename: key,
+              bucketName: 'medcen-data',
+            }),
+          },
+        )
+          .then((res) => res.json())
+          .then(
+            (result) => {
+              console.log(result);
+              // const images = [];
+              // images.push({url: result.body});
+              // this.setState({images}, () =>
+              //   console.log('New Image is: ', this.state.images),
+              // );
+              const {config, fs} = RNFetchBlob;
+              let options = {
+                fileCache: true,
+              };
+              config(options)
+                .fetch('GET', result.body)
+                .then(async (res) => {
+                  console.log('REs is: ', res);
+                  // let r = await res.readStream();
+                  // console.log('R is: ', r);
+                  // r._onEnd((res) => console.log('jkjfjnfdlsdf', res));
+                  // console.log('R2 is: ', r);
+                  let PictureDir = fs.dirs.PictureDir;
+                  const imagePath = `${PictureDir}/${new Date().toISOString()}.jpg`.replace(
+                    /:/g,
+                    '-',
+                  );
+                  RNFS.copyFile(res.data, imagePath);
+                  const {images} = this.state;
+                  images.push({url: 'file://' + imagePath});
+                  this.setState({images, showprogress: false}, () =>
+                    console.log('New Image is: ', this.state.images),
+                  );
+                });
+            },
+            (error) => {
+              console.log('error: ', error);
+            },
+          );
+      });
+    } catch (error) {
+      console.log('An error Occurred while downloading img: ', error);
+    }
+  };
+  renderAddInvoiceModal = () => {
+    const {addInvoiceModalVisibility, orderDetails} = this.state;
+    return (
+      <Portal>
+        <Dialog
+          visible={addInvoiceModalVisibility}
+          onDismiss={() =>
+            this.setState({
+              addInvoiceModalVisibility: false,
+            })
+          }>
+          <Dialog.Title
+            style={{
+              color: themes.TEXT_BLUE_COLOR,
+              justifyContent: 'center',
+              textAlign: 'center',
+              borderBottomColor: themes.CONTENT_GREEN_BACKGROUND,
+              borderBottomWidth: 3,
+            }}>
+            Add An Invoice
+          </Dialog.Title>
+          <Dialog.ScrollArea>
+            <AddInvoice
+              orderDetails={orderDetails}
+              closeModal={() =>
+                this.setState({addInvoiceModalVisibility: false})
+              }
+            />
+          </Dialog.ScrollArea>
+        </Dialog>
+      </Portal>
     );
   };
   render() {
@@ -602,6 +1029,11 @@ class ViewDetails extends Component {
       orderDetails,
       medicineModal,
     } = this.state;
+    // const totalPrice = this.calculateTotalPrice();
+    console.log(
+      'orderDetails.totalPriceorderDetails.totalPrice is:',
+      orderDetails.totalPrice,
+    );
     return (
       <PlainBaseView color={themes.CONTENT_GREEN_BACKGROUND}>
         <ScrollView>
@@ -633,8 +1065,8 @@ class ViewDetails extends Component {
                   paddingVertical: 0,
                   paddingHorizontal: 25,
                 }}>
-                <TouchableOpacity
-                  onPress={() => this.setState({changeOderStatusModal: true})}
+                <View
+                  // onPress={() => this.setState({changeOderStatusModal: true})}
                   style={{
                     margin: 2,
                     backgroundColor: themes.TEXT_BLUE_COLOR,
@@ -650,9 +1082,10 @@ class ViewDetails extends Component {
                       fontSize: themes.FONT_SIZE_MEDIUM,
                       textAlign: 'center',
                     }}>
-                    {`✎   ${getStatusString(orderDetails.status)}`}
+                    {/* {`✎   ${getStatusString(orderDetails.status)}`} */}
+                    {`${getStatusString(orderDetails.status)}`}
                   </Text>
-                </TouchableOpacity>
+                </View>
               </View>
               <View
                 style={{
@@ -663,7 +1096,7 @@ class ViewDetails extends Component {
                 }}>
                 <Text
                   style={{
-                    fontSize: themes.FONT_SIZE_LARGE,
+                    fontSize: themes.FONT_SIZE_MEDIUM,
                     textAlign: 'center',
                   }}>
                   Order Id:
@@ -671,7 +1104,7 @@ class ViewDetails extends Component {
                 <Text
                   style={{
                     fontWeight: 'bold',
-                    fontSize: themes.FONT_SIZE_LARGE,
+                    fontSize: themes.FONT_SIZE_MEDIUM,
                     textAlign: 'center',
                   }}>
                   {`# ${orderDetails.Id}`}
@@ -701,20 +1134,92 @@ class ViewDetails extends Component {
                   45 min ETA
                 </Text>
               </View>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  marginTop: 10,
+                  paddingHorizontal: 15,
+                  marginBottom: 10,
+                  alignItems: 'center',
+                  alignSelf: 'center',
+                }}>
+                <Text
+                  style={{
+                    fontSize: themes.FONT_SIZE_MEDIUM,
+                    textAlign: 'center',
+                  }}>
+                  Payment Mode:
+                </Text>
+                <Text
+                  style={{
+                    fontWeight: 'bold',
+                    fontSize: themes.FONT_SIZE_MEDIUM,
+                    textAlign: 'center',
+                  }}>
+                  {` ${getPaymentModeName(orderDetails.paymentMode)}`}
+                </Text>
+              </View>
             </View>
+
             <Text
               style={{
                 fontSize: themes.FONT_SIZE_MEDIUM,
                 textAlign: 'center',
+                marginBottom: 10,
               }}>
-              {orderDetails.orderTime}
+              {formateDate(orderDetails.orderTime)}
             </Text>
+            {orderDetails.paymentDone && !orderDetails.paymentVerified ? (
+              <TouchableOpacity
+                onPress={() =>
+                  this.setState({
+                    paymentConfirmationModal: true,
+                  })
+                }>
+                <Text
+                  style={{
+                    fontSize: themes.FONT_SIZE_NORMAL,
+                    textAlign: 'center',
+                    color: 'red',
+                  }}>
+                  {'*Press To Confirm Payment'}
+                </Text>
+              </TouchableOpacity>
+            ) : orderDetails.paymentDone && orderDetails.paymentVerified ? (
+              <Text
+                style={{
+                  fontSize: themes.FONT_SIZE_NORMAL,
+                  textAlign: 'center',
+                  color: 'green',
+                }}>
+                {'Payment Done'}
+              </Text>
+            ) : (
+              <TouchableOpacity onPress={() => this.sendReminderToUser()}>
+                <Text
+                  style={{
+                    fontSize: themes.FONT_SIZE_NORMAL,
+                    textAlign: 'center',
+                    color: 'red',
+                  }}>
+                  {'Payment Pending'}
+                </Text>
+                <Text
+                  style={{
+                    fontSize: themes.FONT_SIZE_NORMAL,
+                    textAlign: 'center',
+                    color: 'grey',
+                  }}>
+                  {'*Press To Send Reminder To User'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <CustomeProgress showprogress={showprogress} />
           <View style={{marginTop: 10}}>
             <View style={{flexDirection: 'row-reverse'}}>
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 onPress={() =>
                   this.checkPermission(this.props.route.params.order.keys)
                 }
@@ -739,30 +1244,45 @@ class ViewDetails extends Component {
                   }}>
                   DOWNLOAD
                 </Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
-            <ScrollView horizontal={true} style={{minHeight: 330}}>
-              {images.map((img) => {
-                return (
-                  <TouchableHighlight
-                    onPress={() => this.setState({showImage: true})}
-                    style={{alignItems: 'center'}}>
-                    <Image
-                      source={{
-                        uri: img.url,
-                      }}
-                      resizeMode="contain"
-                      style={{
-                        width: WIDTH,
-                        height: HEIGHT,
-                        alignSelf: 'center',
-                      }}
-                    />
-                  </TouchableHighlight>
-                );
-              })}
-            </ScrollView>
-
+            {images.length > 0 ? (
+              <ScrollView horizontal={true} style={{minHeight: 330}}>
+                {images.map((img) => {
+                  return (
+                    <TouchableHighlight
+                      onPress={() => this.setState({showImage: true})}
+                      style={{alignItems: 'center'}}>
+                      <Image
+                        source={{
+                          uri: img.url,
+                        }}
+                        onError={() => {
+                          console.log('An error while loading image');
+                          this.reDownloadImage();
+                        }}
+                        resizeMode="contain"
+                        style={{
+                          width: WIDTH,
+                          height: HEIGHT,
+                          alignSelf: 'center',
+                        }}
+                      />
+                    </TouchableHighlight>
+                  );
+                })}
+              </ScrollView>
+            ) : (
+              <View
+                style={{
+                  flex: 1,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Image source={WarnigPic} />
+                <Text>No Prescription Available</Text>
+              </View>
+            )}
             {/* <View style={{paddingHorizontal: 40, paddingVertical: 10}}>
               <TouchableOpacity
                 onPress={() =>
@@ -815,36 +1335,38 @@ class ViewDetails extends Component {
                   containerStyle={{margin: 10}}
                 />
               </View>
-              <View style={{flexDirection: 'row-reverse'}}>
-                <TouchableOpacity
-                  onPress={() =>
-                    this.setState({
-                      medicineModal: {
-                        ...medicineModal,
-                        visibility: true,
-                        toadd: true,
-                      },
-                    })
-                  }
-                  style={{
-                    flexDirection: 'row',
-                    backgroundColor: themes.TEXT_BLUE_COLOR,
-                    borderRadius: 25,
-                    paddingHorizontal: 10,
-                    paddingVertical: 5,
-                  }}>
-                  <AntDesignIcon name="pluscircle" size={20} color={'#fff'} />
-                  <Text
+              {this.restrictUpdate ? null : (
+                <View style={{flexDirection: 'row-reverse'}}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      this.setState({
+                        medicineModal: {
+                          ...medicineModal,
+                          visibility: true,
+                          toadd: true,
+                        },
+                      })
+                    }
                     style={{
-                      color: '#fff',
-                      fontWeight: 'bold',
-                      marginLeft: 5,
-                      textAlignVertical: 'center',
+                      flexDirection: 'row',
+                      backgroundColor: themes.TEXT_BLUE_COLOR,
+                      borderRadius: 25,
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
                     }}>
-                    Medicine
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                    <AntDesignIcon name="pluscircle" size={20} color={'#fff'} />
+                    <Text
+                      style={{
+                        color: '#fff',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        textAlignVertical: 'center',
+                      }}>
+                      Add Medicine
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
             <View>
               {medicineList.length > 0 ? (
@@ -902,6 +1424,7 @@ class ViewDetails extends Component {
               {medicineList.map((med, index) => {
                 return (
                   <TouchableOpacity
+                    disabled={this.restrictUpdate}
                     onPress={() => {
                       let {medicineModal, data} = this.state;
                       medicineModal = {
@@ -960,6 +1483,15 @@ class ViewDetails extends Component {
                         }}>
                         {med.price}
                       </Text>
+                      {this.restrictUpdate ? null : (
+                        <Text
+                          style={{
+                            color: 'red',
+                            fontSize: themes.FONT_SIZE_VERY_VERY_LARGE,
+                          }}>
+                          ✎
+                        </Text>
+                      )}
                     </View>
                     <Text
                       style={{
@@ -975,6 +1507,56 @@ class ViewDetails extends Component {
                   </TouchableOpacity>
                 );
               })}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'flex-end',
+                  alignItems: 'flex-end',
+                  marginHorizontal: 15,
+                }}>
+                <TouchableOpacity
+                  onPress={() =>
+                    this.setState({
+                      addInvoiceModalVisibility: true,
+                    })
+                  }
+                  style={{
+                    flexDirection: 'row',
+                    backgroundColor: themes.TEXT_BLUE_COLOR,
+                    borderRadius: 25,
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                  }}>
+                  {orderDetails.invoiceKey &&
+                  orderDetails.invoiceKey.length > 0 ? (
+                    <AntDesignIcon name="edit" size={20} color={'#fff'} />
+                  ) : (
+                    <AntDesignIcon name="pluscircle" size={20} color={'#fff'} />
+                  )}
+
+                  <Text
+                    style={{
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      marginLeft: 5,
+                      textAlignVertical: 'center',
+                    }}>
+                    Upload Invoice
+                  </Text>
+                </TouchableOpacity>
+
+                <Text
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row-reverse',
+                    fontWeight: 'bold',
+                    marginVertical: 10,
+                    textAlign: 'right',
+                    fontSize: themes.FONT_SIZE_MEDIUM,
+                  }}>{`Total  ₹${
+                  orderDetails.totalPrice ? orderDetails.totalPrice : 0
+                }`}</Text>
+              </View>
               <View style={{marginHorizontal: 5, marginVertical: 10}}>
                 <ExpandeablePanel
                   title={`Delivery To: ${this.state.orderDetails.address.line1} ${this.state.orderDetails.address.line2} ${this.state.orderDetails.address.line3} ${this.state.orderDetails.address.city} ${this.state.orderDetails.address.state}`}>
@@ -982,7 +1564,61 @@ class ViewDetails extends Component {
                 </ExpandeablePanel>
               </View>
             </View>
+            <View style={{paddingHorizontal: 10, paddingVertical: 10}}>
+              <SiCheckBox
+                title="Repeat Order"
+                containerStyle={{
+                  backgroundColor: '#fff',
+                  margin: 0,
+                  marginHorizontal: 0,
+                  marginVertical: 0,
+                  padding: 5,
+                  borderWidth: 0,
+                }}
+                checked={this.state.orderDetails.repeatOrder}
+              />
+              {this.state.orderDetails.repeatOrder ? (
+                <View>
+                  <Text
+                    style={{
+                      marginTop: 10,
+                      fontWeight: 'bold',
+                      fontSize: themes.FONT_SIZE_NORMAL,
+                      marginHorizontal: 10,
+                    }}>
+                    {`Order Frequency: ${getRepeatOrderString(
+                      this.state.orderDetails.frequency,
+                    )}`}
+                  </Text>
+                  <SiNewDate
+                    value={this.state.orderDetails.orderExpiry}
+                    textlabel={
+                      this.state.orderDetails.frequency === 'once'
+                        ? 'Next Order Date'
+                        : 'Order Expire Date'
+                    }
+                    // style={{borderWidth: 1}}
+                    // containerStyle={{marginTop: 10}}
+                    disabled={true}
+                  />
+                </View>
+              ) : null}
+            </View>
+
             <View style={{marginHorizontal: 8}}>
+              {this.historyCommments && this.historyCommments !== '' ? (
+                <View style={{marginHorizontal: 10}}>
+                  <Text
+                    style={{
+                      fontWeight: 'bold',
+                      fontSize: themes.FONT_SIZE_MEDIUM,
+                    }}>
+                    Previous Comments
+                  </Text>
+                  <Text>{this.historyCommments}</Text>
+                </View>
+              ) : // <Text>{this.historyCommments}</Text>
+              null}
               <CustomTextInput
                 editable
                 required={true}
@@ -1003,10 +1639,23 @@ class ViewDetails extends Component {
               />
             </View>
             <View style={{paddingHorizontal: 30}}>
-              <CustomButton
+              {this.restrictUpdate ? (
+                <CustomButton
+                  text="Update Comment"
+                  onPress={() => this.updateOrder()}
+                />
+              ) : (
+                <CustomButton
+                  text="Update Order"
+                  // onPress={() => this.updateOrder()}
+                  onPress={() => this.setState({changeOderStatusModal: true})}
+                />
+              )}
+              {/* <CustomButton
                 text="Update Order"
-                onPress={() => this.updateOrder()}
-              />
+                // onPress={() => this.updateOrder()}
+                onPress={() => this.setState({changeOderStatusModal: true})}
+              /> */}
             </View>
             <Modal
               visible={showImage}
@@ -1022,7 +1671,11 @@ class ViewDetails extends Component {
           </View>
         </ScrollView>
         {this.renderAddMedicineModal()}
+        {this.renderAddInvoiceModal()}
         {this.renderChangeOrderStatus()}
+        {orderDetails.paymentDone && !orderDetails.paymentVerified
+          ? this.renderConfirmOrderStatus()
+          : null}
       </PlainBaseView>
     );
   }

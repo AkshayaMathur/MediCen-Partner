@@ -43,12 +43,30 @@ export const formatDate = (date) => {
 export const diff = (dateA, dateB) =>
   moment(formatDate(dateA)).diff(moment(formatDate(dateB)));
 
-export const isFuture = (date) => moment(formatDate(date)).isAfter();
+export const isFuture = (date, date1) =>
+  moment(formatDate(date)).isAfter(date1);
 
 export const fromNow = (date) => moment(formatDate(date)).fromNow();
 
 export const add = (amountInSeconds) => moment().add(amountInSeconds, 's');
 
-export const isBefore = (seconds) => moment().isBefore(seconds);
+export const isBefore = (date, date1) =>
+  moment(formatDate(date)).isBefore(date1);
 
 export const getDate = (date) => moment(formatDate(date));
+
+export const formateDate = (date) => moment(date).format('DD-MMM-YYYY hh:MM a');
+
+export const getMonth = (date) => moment(date).month();
+
+export const getPrevDate = (days) => {
+  var tomm = new Date();
+  tomm.setDate(tomm.getDate() - days);
+  return tomm;
+};
+
+export const getPrevMonth = (month) => {
+  var tomm = new Date();
+  tomm.setMonth(tomm.getMonth() - month);
+  return tomm;
+};

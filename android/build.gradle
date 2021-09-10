@@ -13,6 +13,7 @@ buildscript {
         supportLibVersion = "28.0.0"
 //        googlePlayServicesVersion = "16.1.0" // default: "+"
         firebaseVersion = "17.3.4"
+        firebaseMessagingVersion = "21.1.0"
         mediaCompatVersion = '1.0.1' // Do not specify if using old libraries, specify '1.0.1' or similar for androidx.media:media dependency
         supportV4Version = '1.0.0'
     }

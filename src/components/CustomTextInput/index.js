@@ -1,7 +1,13 @@
 import React, {PureComponent} from 'react';
 import PropTypes from 'prop-types';
-import {TouchableOpacity, Text, View, StyleSheet} from 'react-native';
-import {TextInput, HelperText} from 'react-native-paper';
+import {
+  TouchableOpacity,
+  Text,
+  View,
+  StyleSheet,
+  TextInput,
+} from 'react-native';
+import {HelperText} from 'react-native-paper';
 import themes from '../../themes';
 
 export default class CustomTextInput extends PureComponent {
@@ -92,6 +98,7 @@ export default class CustomTextInput extends PureComponent {
         </View>
         <View style={{flexDirection: 'row', flex: 1, marginVertical: 5}}>
           <TextInput
+            {...this.props}
             underlineColorAndroid="transparent"
             underlineColor="transparent"
             multiline
@@ -110,13 +117,14 @@ export default class CustomTextInput extends PureComponent {
             style={{
               backgroundColor: '#fff',
               borderRadius: 25,
-              underlineColor: 'transparent',
-              underlineColorAndroid: 'transparent',
-              height: 40,
+              // underlineColor: 'transparent',
+              // underlineColorAndroid: 'transparent',
+              // height: 40,
               overflow: 'hidden',
               flex: 1,
               borderColor: themes.GREEN_BLUE,
               borderWidth: 2,
+              paddingHorizontal: 10,
             }}
             theme={{
               colors: {

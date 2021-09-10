@@ -1,0 +1,10 @@
+{
+  "auth": {
+    "medcenpartnere740d885e740d885": {
+      "service": "Cognito",
+      "providerPlugin": "awscloudformation",
+      "dependsOn": [],
+      "customAuth": false
+    }
+  }
+}

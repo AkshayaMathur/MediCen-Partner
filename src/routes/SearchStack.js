@@ -3,6 +3,7 @@ import {createStackNavigator} from '@react-navigation/stack';
 import SearchPage from '../pages/SearchPage';
 import UploadPrescription from '../pages/UploadPrescription';
 import ViewDetails from '../pages/ViewDetails';
+import PatientReport from '../pages/PatientReport';
 
 const SearchStack = createStackNavigator();
 
@@ -16,6 +17,7 @@ const SearchStackScreens = ({navigation}) => (
       }}
     />
     <SearchStack.Screen name="ViewDetails" component={ViewDetails} />
+    <SearchStack.Screen name="PatientReport" component={PatientReport} />
   </SearchStack.Navigator>
 );
 

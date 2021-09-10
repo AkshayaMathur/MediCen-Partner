@@ -194,7 +194,7 @@ class UploadPrescription extends Component {
               : 'CameraPic.jpeg';
             imgObj.name = `${new Date().toISOString()}_${n}`;
             imgObj.uri = image.path;
-            imgObj.type = img.mime;
+            // imgObj.type = img.mime;
             // image.data =d
 
             // imgObj.imageContent = image.path;

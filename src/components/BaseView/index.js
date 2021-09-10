@@ -5,6 +5,7 @@ import {
   Dimensions,
   SafeAreaView,
   StatusBar,
+  Platform,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import themes from '../../themes';
@@ -42,7 +43,7 @@ const styles = StyleSheet.create({
     // width: Dimensions.get('window').width,
     // height: Dimensions.get('window').height,
     //  backgroundColor: '#21A8A8',
-    backgroundColor: 'green',
+    backgroundColor: themes.CONTENT_GREEN_BACKGROUND,
     //  backgroundColor: '#fff'
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     //  color:'#fff'
